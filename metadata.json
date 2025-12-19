@@ -1,0 +1,5 @@
+{
+  "name": "Concept Simulator",
+  "description": "A sophisticated engineering tool that analyzes technical documents using Gemini 3 Pro and auto-generates interactive React simulations.",
+  "requestFramePermissions": []
+}
