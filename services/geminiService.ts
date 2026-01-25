@@ -1,31 +1,43 @@
-import { GoogleGenAI } from "@google/genai";
 import { GEMINI_MODEL_REASONING } from "../constants";
 import { FileData, ChatMessage } from "../types";
 
-let aiClient: GoogleGenAI | null = null;
+// Backend API URL - uses environment variable or defaults to relative path for Vercel
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
-const getClient = () => {
-  if (!aiClient) {
-    if (!process.env.API_KEY) {
-        throw new Error("API Key not found");
+/**
+ * Calls the backend serverless function to generate content
+ */
+const callGeminiAPI = async (payload: {
+    model: string;
+    contents: any;
+    config?: any;
+}): Promise<{ text: string }> => {
+    const response = await fetch(`${API_BASE_URL}/generate`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'API call failed' }));
+        throw new Error(error.error || 'API call failed');
     }
-    aiClient = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  }
-  return aiClient;
+
+    return response.json();
 };
 
 export const analyzeAndGenerateSimulation = async (
-  base64Data: string,
-  mimeType: string,
-  onLog: (msg: string) => void
+    base64Data: string,
+    mimeType: string,
+    onLog: (msg: string) => void
 ): Promise<string> => {
-  const ai = getClient();
-  
-  onLog("Initializing System Core...");
-  onLog(`Model Architecture: ${GEMINI_MODEL_REASONING}`);
-  onLog("Allocating Thinking Budget: 16k tokens");
+    onLog("Initializing System Core...");
+    onLog(`Model Architecture: ${GEMINI_MODEL_REASONING}`);
+    onLog("Allocating Thinking Budget: 16k tokens");
 
-  const prompt = `
+    const prompt = `
     You are an expert Physics Engine Developer and React Frontend Engineer.
     
     TASK:
@@ -105,73 +117,72 @@ export const analyzeAndGenerateSimulation = async (
     - Return ONLY the raw code string. No markdown blocks.
   `;
 
-  try {
-    onLog("Uploading data to context window...");
-    onLog("Executing reasoning protocols...");
+    try {
+        onLog("Uploading data to context window...");
+        onLog("Executing reasoning protocols...");
 
-    const parts = [];
+        const parts = [];
 
-    // Special handling for text files
-    if (mimeType === 'text/plain') {
-        const decodedText = atob(base64Data);
-        parts.push({ text: `DATA STREAM:\n${decodedText}` });
-    } else {
-        parts.push({
-            inlineData: {
-              mimeType: mimeType,
-              data: base64Data
+        // Special handling for text files
+        if (mimeType === 'text/plain') {
+            const decodedText = atob(base64Data);
+            parts.push({ text: `DATA STREAM:\n${decodedText}` });
+        } else {
+            parts.push({
+                inlineData: {
+                    mimeType: mimeType,
+                    data: base64Data
+                }
+            });
+        }
+
+        // Add the main prompt
+        parts.push({ text: prompt });
+
+        const response = await callGeminiAPI({
+            model: GEMINI_MODEL_REASONING,
+            contents: {
+                parts: parts
+            },
+            config: {
+                thinkingConfig: {
+                    thinkingBudget: 16000
+                },
+                temperature: 0.5, // Lower temperature for more deterministic/stable code
             }
         });
+
+        onLog("Reasoning sequence complete.");
+        onLog("Synthesizing Interface...");
+
+        const text = response.text || "";
+
+        const codeBlockRegex = /```(?:tsx|jsx|javascript|js)?\s*([\s\S]*?)\s*```/;
+        const match = text.match(codeBlockRegex);
+
+        let cleanedText = match ? match[1] : text;
+
+        if (!match) {
+            cleanedText = cleanedText.replace(/^```tsx/, '').replace(/^```javascript/, '').replace(/^```/, '').replace(/```$/, '');
+        }
+
+        onLog("Simulation compiled.");
+        return cleanedText;
+
+    } catch (error) {
+        console.error("Gemini Error:", error);
+        onLog(`FATAL EXCEPTION: ${error instanceof Error ? error.message : "Unknown error"}`);
+        throw error;
     }
-
-    // Add the main prompt
-    parts.push({ text: prompt });
-
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL_REASONING,
-      contents: {
-        parts: parts
-      },
-      config: {
-        thinkingConfig: {
-            thinkingBudget: 16000
-        },
-        temperature: 0.5, // Lower temperature for more deterministic/stable code
-      }
-    });
-
-    onLog("Reasoning sequence complete.");
-    onLog("Synthesizing Interface...");
-    
-    const text = response.text || "";
-    
-    const codeBlockRegex = /```(?:tsx|jsx|javascript|js)?\s*([\s\S]*?)\s*```/;
-    const match = text.match(codeBlockRegex);
-    
-    let cleanedText = match ? match[1] : text;
-    
-    if (!match) {
-        cleanedText = cleanedText.replace(/^```tsx/, '').replace(/^```javascript/, '').replace(/^```/, '').replace(/```$/, '');
-    }
-
-    onLog("Simulation compiled.");
-    return cleanedText;
-
-  } catch (error) {
-    console.error("Gemini Error:", error);
-    onLog(`FATAL EXCEPTION: ${error instanceof Error ? error.message : "Unknown error"}`);
-    throw error;
-  }
 };
 
 export const fixSimulationCode = async (
-    code: string, 
-    error: string, 
+    code: string,
+    error: string,
     onLog: (msg: string) => void
 ): Promise<string> => {
-    const ai = getClient();
     onLog("Initializing Auto-Correction Protocol...");
-    
+
     const prompt = `
       You are an expert React Engineer. The following React component crashed during execution.
       
@@ -194,9 +205,9 @@ export const fixSimulationCode = async (
       OUTPUT FORMAT:
       - Return ONLY the raw code string. No markdown blocks.
     `;
-    
+
     try {
-        const response = await ai.models.generateContent({
+        const response = await callGeminiAPI({
             model: 'gemini-2.5-flash',
             contents: { parts: [{ text: prompt }] },
         });
@@ -204,13 +215,13 @@ export const fixSimulationCode = async (
         const text = response.text || "";
         const codeBlockRegex = /```(?:tsx|jsx|javascript|js)?\s*([\s\S]*?)\s*```/;
         const match = text.match(codeBlockRegex);
-        
+
         let cleanedText = match ? match[1] : text;
-        
+
         if (!match) {
             cleanedText = cleanedText.replace(/^```tsx/, '').replace(/^```javascript/, '').replace(/^```/, '').replace(/```$/, '');
         }
-        
+
         onLog("Patch applied successfully.");
         return cleanedText;
 
@@ -222,71 +233,68 @@ export const fixSimulationCode = async (
 };
 
 export const processChat = async (
-    userMessage: string, 
-    history: ChatMessage[], 
+    userMessage: string,
+    history: ChatMessage[],
     contextFile: FileData | null
 ): Promise<{ text: string }> => {
-  const ai = getClient();
-  
-  try {
-    const contents = [];
+    try {
+        const contents = [];
 
-    // System Instruction
-    const systemInstruction = "You are a helpful technical assistant answering questions about the provided file/context. Be concise.";
+        // System Instruction
+        const systemInstruction = "You are a helpful technical assistant answering questions about the provided file/context. Be concise.";
 
-    // History to Contents
-    const recentHistory = history.slice(-10);
-    
-    for (const msg of recentHistory) {
-        contents.push({
-            role: msg.role === 'user' ? 'user' : 'model',
-            parts: [{ text: msg.text }]
-        });
-    }
+        // History to Contents
+        const recentHistory = history.slice(-10);
 
-    // Current User Message + Context
-    const currentParts = [];
-    if (contextFile) {
-        if (contextFile.type === 'text/plain') {
-            const decoded = atob(contextFile.data);
-            currentParts.push({ text: `REFERENCE CONTEXT:\n${decoded}\n\n` });
-        } else {
-            currentParts.push({
-                inlineData: {
-                    mimeType: contextFile.type,
-                    data: contextFile.data
-                }
+        for (const msg of recentHistory) {
+            contents.push({
+                role: msg.role === 'user' ? 'user' : 'model',
+                parts: [{ text: msg.text }]
             });
-            currentParts.push({ text: "REFERENCE CONTEXT: The image/PDF above.\n\n" });
         }
+
+        // Current User Message + Context
+        const currentParts = [];
+        if (contextFile) {
+            if (contextFile.type === 'text/plain') {
+                const decoded = atob(contextFile.data);
+                currentParts.push({ text: `REFERENCE CONTEXT:\n${decoded}\n\n` });
+            } else {
+                currentParts.push({
+                    inlineData: {
+                        mimeType: contextFile.type,
+                        data: contextFile.data
+                    }
+                });
+                currentParts.push({ text: "REFERENCE CONTEXT: The image/PDF above.\n\n" });
+            }
+        }
+        currentParts.push({ text: userMessage });
+
+        contents.push({
+            role: 'user',
+            parts: currentParts
+        });
+
+        const response = await callGeminiAPI({
+            model: 'gemini-2.5-flash',
+            config: { systemInstruction },
+            contents: contents,
+        });
+
+        return { text: response.text || "No response." };
+
+    } catch (error) {
+        console.error("Chat Error:", error);
+        throw error;
     }
-    currentParts.push({ text: userMessage });
-    
-    contents.push({
-        role: 'user',
-        parts: currentParts
-    });
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      config: { systemInstruction },
-      contents: contents,
-    });
-
-    return { text: response.text || "No response." };
-
-  } catch (error) {
-    console.error("Chat Error:", error);
-    throw error;
-  }
 };
 
 // Conversational Architect for defining simulations
 export const processArchitectChat = async (
-    userMessage: string, 
+    userMessage: string,
     history: ChatMessage[]
 ): Promise<{ text: string, action?: { type: 'generate', topic: string } }> => {
-    const ai = getClient();
     try {
         const systemInstruction = `
             You are a System Architect for a Simulation Engine.
@@ -321,7 +329,7 @@ export const processArchitectChat = async (
         }
         contents.push({ role: 'user', parts: [{ text: userMessage }] });
 
-        const response = await ai.models.generateContent({
+        const response = await callGeminiAPI({
             model: 'gemini-2.5-flash',
             config: { systemInstruction },
             contents: contents,
@@ -350,7 +358,6 @@ export const processArchitectChat = async (
 };
 
 export const generateSuggestedQuestions = async (contextFile: FileData): Promise<string[]> => {
-    const ai = getClient();
     try {
         let contextText = "";
         if (contextFile.type === 'text/plain') {
@@ -368,7 +375,7 @@ export const generateSuggestedQuestions = async (contextFile: FileData): Promise
             ${contextText.substring(0, 1000)}...
         `;
 
-        const response = await ai.models.generateContent({
+        const response = await callGeminiAPI({
             model: 'gemini-2.5-flash',
             contents: { parts: [{ text: prompt }] },
             config: { responseMimeType: 'application/json' }
