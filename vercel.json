@@ -1,11 +1,4 @@
 {
     "buildCommand": "npm run build",
-    "devCommand": "npm run dev",
-    "installCommand": "npm install",
-    "env": {
-        "GEMINI_API_KEY": {
-            "description": "Your Gemini API key from https://aistudio.google.com/apikey",
-            "value": ""
-        }
-    }
+    "installCommand": "npm install"
 }

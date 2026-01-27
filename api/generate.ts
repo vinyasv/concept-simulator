@@ -17,8 +17,8 @@ export default async function handler(
   }
 
   try {
-    const aiClient = new GoogleGenAI({ 
-      apiKey: process.env.GEMINI_API_KEY 
+    const aiClient = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY
     });
 
     const { model, contents, config } = req.body;
@@ -35,18 +35,18 @@ export default async function handler(
     });
 
     // Return the response
-    res.status(200).json({ 
+    res.status(200).json({
       text: response.text || '',
-      success: true 
+      success: true
     });
 
   } catch (error) {
     console.error('Gemini API Error:', error);
-    
+
     // Return error response
-    res.status(500).json({ 
+    res.status(500).json({
       error: error instanceof Error ? error.message : 'Generation failed',
-      success: false 
+      success: false
     });
   }
 }
