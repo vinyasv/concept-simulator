@@ -6,8 +6,10 @@ import QnAPanel from './components/QnAPanel';
 import { analyzeAndGenerateSimulation, generateSuggestedQuestions, fixSimulationCode } from './services/geminiService';
 import { LogEntry, FileData, AppStatus, LibraryItem } from './types';
 import { INITIAL_CODE_STUB, LIBRARY_DATA } from './constants';
+import IterationOne from './components/IterationOne';
+import { useSimulationWorkspace } from './hooks/useSimulationWorkspace';
 
-const App = () => {
+const LegacyApp = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [status, setStatus] = useState<AppStatus>(AppStatus.IDLE);
   const [currentFile, setCurrentFile] = useState<FileData | null>(null);
@@ -301,6 +303,24 @@ const App = () => {
       </main>
     </div>
   );
+};
+
+const FreshApp = () => {
+  const workspace = useSimulationWorkspace();
+  return <IterationOne workspace={workspace} />;
+};
+
+const RedirectToMinimal = () => {
+  React.useEffect(() => {
+    window.location.replace('/1');
+  }, []);
+  return null;
+};
+
+const App = () => {
+  if (window.location.pathname === '/1') return <FreshApp />;
+  if (window.location.pathname === '/2') return <RedirectToMinimal />;
+  return <LegacyApp />;
 };
 
 export default App;

@@ -1,7 +1,8 @@
-import { LibraryCategory, FileData } from './types';
+import { LibraryCategory, FileData, LibraryItem } from './types';
+import { createCachedCSCode } from './cachedComputerScience';
+import { lessons } from './simulations/lessons';
 
-export const GEMINI_MODEL_REASONING = 'gemini-3-flash-preview';
-export const GEMINI_MODEL_ASSETS = 'gemini-3-pro-image-preview';
+export { GEMINI_MODEL_PRIMARY as GEMINI_MODEL_REASONING } from './geminiModels';
 
 export const INITIAL_CODE_STUB = `
 // Simulation Container
@@ -23,206 +24,9 @@ render(<ConceptSimulation />);
 
 // --- CACHED SIMULATIONS ---
 
-const PROJECTILE_CODE = `
-const ProjectileSim = () => {
-  const [v0, setV0] = React.useState(50);
-  const [theta, setTheta] = React.useState(45);
-  const [g, setG] = React.useState(9.8);
-  
-  const data = React.useMemo(() => {
-    const d = [];
-    const rad = theta * Math.PI / 180;
-    const tTotal = (2 * v0 * Math.sin(rad)) / g;
-    
-    for(let t=0; t<=tTotal; t+=tTotal/50) {
-      d.push({
-        t: t.toFixed(2),
-        x: v0 * Math.cos(rad) * t,
-        y: v0 * Math.sin(rad) * t - 0.5 * g * t * t
-      });
-    }
-    return d;
-  }, [v0, theta, g]);
+const PROJECTILE_CODE = `render(<PhysicsSimulation id="projectile" />);`;
 
-  return (
-    <div className="h-full w-full p-6 flex flex-col gap-6 font-mono text-xs">
-      <div className="border-b border-[#E0E0E0] pb-4">
-        <h2 className="text-xl font-bold uppercase tracking-tight mb-2">Projectile Kinematics</h2>
-        <p className="text-sm text-[#555555] max-w-3xl leading-relaxed">
-            Simulates the parabolic trajectory of an object under gravity. Adjusting velocity (v0) and angle affects the range and maximum height, governed by the kinematic equations of motion neglecting air resistance.
-        </p>
-      </div>
-      <div className="flex gap-4 border-b border-[#E0E0E0] pb-4">
-        <div className="flex flex-col">
-          <label>Velocity (v0): {v0}</label>
-          <input type="range" min="1" max="100" value={v0} onChange={e=>setV0(Number(e.target.value))} />
-        </div>
-        <div className="flex flex-col">
-          <label>Angle (deg): {theta}</label>
-          <input type="range" min="1" max="90" value={theta} onChange={e=>setTheta(Number(e.target.value))} />
-        </div>
-        <div className="flex flex-col">
-          <label>Gravity: {g}</label>
-          <input type="range" min="1" max="20" value={g} onChange={e=>setG(Number(e.target.value))} />
-        </div>
-      </div>
-      <div className="flex-1 min-h-[300px]">
-        <Recharts.ResponsiveContainer width="100%" height="100%">
-          <Recharts.LineChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-            <Recharts.CartesianGrid stroke="#eee" strokeDasharray="3 3" />
-            <Recharts.XAxis dataKey="x" type="number" domain={[0, 'auto']} allowDataOverflow={false} tick={{fontSize: 10}} />
-            <Recharts.YAxis dataKey="y" domain={[0, 'auto']} tick={{fontSize: 10}} />
-            <Recharts.Tooltip contentStyle={{ fontSize: '10px', borderRadius: '0px', border: '1px solid #E0E0E0' }} />
-            <Recharts.Line type="monotone" dataKey="y" stroke="#000" dot={false} strokeWidth={1.5} />
-          </Recharts.LineChart>
-        </Recharts.ResponsiveContainer>
-      </div>
-    </div>
-  );
-};
-render(<ProjectileSim />);
-`;
-
-const NEWTON_LAWS_CODE = `
-const NewtonLawsSim = () => {
-  const [mass, setMass] = React.useState(5);
-  const [force, setForce] = React.useState(20);
-  const [velocity, setVelocity] = React.useState(0);
-  const [position, setPosition] = React.useState(10);
-  const [running, setRunning] = React.useState(false);
-
-  React.useEffect(() => {
-    let interval;
-    if (running) {
-      interval = setInterval(() => {
-        setVelocity(v => {
-            const a = force / mass;
-            // Simple integration v = v0 + at
-            return v + a * 0.05; 
-        });
-        setPosition(p => {
-            // Update position
-            let next = p + velocity * 0.05;
-            // Boundary wrap for demo continuity
-            if (next > 100) return 0;
-            if (next < 0) return 100;
-            return next;
-        });
-      }, 20);
-    }
-    return () => clearInterval(interval);
-  }, [running, force, mass, velocity]);
-
-  const acceleration = (force / mass).toFixed(2);
-
-  return (
-    <div className="h-full w-full p-6 flex flex-col gap-6 font-mono text-xs">
-      <div className="border-b border-[#E0E0E0] pb-4">
-        <h2 className="text-xl font-bold uppercase tracking-tight mb-2">Newton's Second Law</h2>
-        <p className="text-sm text-[#555555] max-w-3xl leading-relaxed">
-            F = ma. An object's acceleration is determined by the net force acting on it and its mass. 
-            Adjust the Force and Mass to see how they affect the object's acceleration and velocity.
-        </p>
-      </div>
-      
-      <div className="grid grid-cols-3 gap-4 border-b border-[#E0E0E0] pb-4">
-         <div>
-            <label>Net Force (N): {force}</label>
-            <input type="range" min="-50" max="50" value={force} onChange={e=>setForce(Number(e.target.value))} className="w-full"/>
-         </div>
-         <div>
-            <label>Mass (kg): {mass}</label>
-            <input type="range" min="1" max="20" value={mass} onChange={e=>setMass(Number(e.target.value))} className="w-full"/>
-         </div>
-         <div className="flex items-end gap-2">
-            <button onClick={()=>setRunning(!running)} className="bg-black text-white px-4 py-1 uppercase w-full hover:opacity-80 transition-opacity">
-                {running ? 'Pause' : 'Simulate'}
-            </button>
-            <button 
-                onClick={()=>{setRunning(false); setVelocity(0); setPosition(10);}} 
-                className="border border-[#ccc] px-4 py-1 uppercase w-full hover:bg-gray-50 transition-colors"
-            >
-                Reset
-            </button>
-         </div>
-      </div>
-
-      <div className="flex justify-around items-center text-lg font-bold p-4 bg-[#F9F9F9] border border-[#E0E0E0]">
-         <div className="flex flex-col items-center">
-            <span className="text-[10px] text-[#757575] uppercase">Applied Force</span>
-            <span>{force} N</span>
-         </div>
-         <div className="text-[#999] text-2xl">/</div>
-         <div className="flex flex-col items-center">
-            <span className="text-[10px] text-[#757575] uppercase">Mass</span>
-            <span>{mass} kg</span>
-         </div>
-         <div className="text-[#999] text-2xl">=</div>
-         <div className="flex flex-col items-center text-red-600">
-            <span className="text-[10px] text-[#757575] uppercase">Acceleration</span>
-            <span>{acceleration} m/s²</span>
-         </div>
-         <div className="w-px h-8 bg-[#ccc] mx-2"></div>
-         <div className="flex flex-col items-center text-blue-600">
-            <span className="text-[10px] text-[#757575] uppercase">Velocity</span>
-            <span>{velocity.toFixed(1)} m/s</span>
-         </div>
-      </div>
-
-      <div className="flex-1 bg-white border border-[#E0E0E0] relative overflow-hidden min-h-[200px] flex items-end">
-          {/* Track marks */}
-          <div className="absolute bottom-0 w-full h-full border-b border-[#ccc]" style={{backgroundImage: 'linear-gradient(to right, #f0f0f0 1px, transparent 1px)', backgroundSize: '50px 100%'}}></div>
-
-          {/* Object */}
-          <div 
-            className="absolute bottom-10 w-16 h-16 bg-black flex items-center justify-center text-white font-bold transition-transform duration-75 shadow-lg z-10"
-            style={{ 
-                left: position + '%',
-                width: Math.max(40, mass * 4) + 'px', 
-                height: Math.max(40, mass * 4) + 'px'
-            }} 
-          >
-             {mass}kg
-          </div>
-          
-          {/* Force Vector Arrow */}
-          {force !== 0 && (
-              <div 
-                className="absolute bottom-[calc(2.5rem+4px)] h-0.5 bg-red-600 transition-all duration-75 z-20 flex items-center"
-                style={{ 
-                    left: position + '%',
-                    marginLeft: (Math.max(40, mass * 4) / 2) + 'px',
-                    width: (Math.abs(force) * 3) + 'px',
-                    transformOrigin: 'left center',
-                    transform: force < 0 ? 'rotate(180deg)' : 'none'
-                }}
-              >
-                  <div className="absolute right-0 w-0 h-0 border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent border-l-[8px] border-l-red-600"></div>
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-[9px] font-bold text-red-600 whitespace-nowrap">F = {Math.abs(force)}N</div>
-              </div>
-          )}
-          
-          {/* Velocity Vector Arrow */}
-          {Math.abs(velocity) > 0.1 && (
-              <div 
-                className="absolute bottom-[calc(2.5rem-15px)] h-0.5 bg-blue-500 transition-all duration-75 z-20 flex items-center opacity-70"
-                style={{ 
-                    left: position + '%',
-                    marginLeft: (Math.max(40, mass * 4) / 2) + 'px',
-                    width: (Math.abs(velocity) * 2) + 'px',
-                    transformOrigin: 'left center',
-                    transform: velocity < 0 ? 'rotate(180deg)' : 'none'
-                }}
-              >
-                 <div className="absolute right-0 w-0 h-0 border-t-[3px] border-t-transparent border-b-[3px] border-b-transparent border-l-[6px] border-l-blue-500"></div>
-              </div>
-          )}
-      </div>
-    </div>
-  );
-};
-render(<NewtonLawsSim />);
-`;
+const NEWTON_LAWS_CODE = `render(<PhysicsSimulation id="newton" />);`;
 
 const OHM_CODE = `
 const OhmSim = () => {
@@ -342,53 +146,7 @@ const NewtonSim = () => {
 render(<NewtonSim />);
 `;
 
-const SHM_CODE = `
-const SHMSim = () => {
-  const [A, setA] = React.useState(10);
-  const [w, setW] = React.useState(2);
-  const [phi, setPhi] = React.useState(0);
-
-  const data = React.useMemo(() => {
-    const d = [];
-    for (let t = 0; t <= 10; t += 0.1) {
-      d.push({
-        t: t.toFixed(1),
-        x: A * Math.cos(w * t + phi)
-      });
-    }
-    return d;
-  }, [A, w, phi]);
-
-  return (
-    <div className="h-full w-full p-6 flex flex-col gap-6 font-mono text-xs">
-      <div className="border-b border-[#E0E0E0] pb-4">
-        <h2 className="text-xl font-bold uppercase tracking-tight mb-2">Simple Harmonic Motion</h2>
-        <p className="text-sm text-[#555555] max-w-3xl leading-relaxed">
-            Visualizes periodic motion (like a pendulum or spring). 
-            Amplitude (A) controls height, Frequency (w) controls speed of oscillation, and Phase (phi) shifts the starting point.
-        </p>
-      </div>
-      <div className="grid grid-cols-3 gap-4 border-b border-[#E0E0E0] pb-4">
-        <div><label>Amplitude (A): {A}</label><input className="w-full" type="range" min="1" max="20" value={A} onChange={e=>setA(Number(e.target.value))}/></div>
-        <div><label>Frequency (w): {w}</label><input className="w-full" type="range" min="1" max="10" step="0.5" value={w} onChange={e=>setW(Number(e.target.value))}/></div>
-        <div><label>Phase (phi): {phi}</label><input className="w-full" type="range" min="0" max="6.28" step="0.1" value={phi} onChange={e=>setPhi(Number(e.target.value))}/></div>
-      </div>
-      <div className="flex-1 min-h-[300px]">
-        <Recharts.ResponsiveContainer width="100%" height="100%">
-          <Recharts.LineChart data={data}>
-             <Recharts.CartesianGrid strokeDasharray="3 3" />
-             <Recharts.XAxis dataKey="t" />
-             <Recharts.YAxis />
-             <Recharts.Tooltip />
-             <Recharts.Line type="monotone" dataKey="x" stroke="#000" dot={false} />
-          </Recharts.LineChart>
-        </Recharts.ResponsiveContainer>
-      </div>
-    </div>
-  );
-};
-render(<SHMSim />);
-`;
+const SHM_CODE = `render(<PhysicsSimulation id="shm" />);`;
 
 const SNELL_CODE = `
 const SnellSim = () => {
@@ -399,7 +157,9 @@ const SnellSim = () => {
   const rad = (d) => d * Math.PI / 180;
   const deg = (r) => r * 180 / Math.PI;
 
-  const theta2 = deg(Math.asin((n1 * Math.sin(rad(theta1))) / n2));
+  const sineRatio = (n1 * Math.sin(rad(theta1))) / n2;
+  const totalInternalReflection = sineRatio > 1;
+  const theta2 = totalInternalReflection ? 0 : deg(Math.asin(Math.min(1, sineRatio)));
   
   const cx = 150, cy = 150;
   const len = 100;
@@ -416,7 +176,7 @@ const SnellSim = () => {
         <h2 className="text-xl font-bold uppercase tracking-tight mb-2">Snell's Law (Refraction)</h2>
         <p className="text-sm text-[#555555] max-w-3xl leading-relaxed">
             Calculates how light bends when entering a different medium (n1 to n2). 
-            If light travels to a less dense medium at a steep enough angle, the formula returns NaN, indicating Total Internal Reflection.
+            When light travels toward a lower refractive index above the critical angle, total internal reflection occurs: no propagating refracted ray emerges.
         </p>
       </div>
       <div className="grid grid-cols-3 gap-4 border-b border-[#E0E0E0] pb-4">
@@ -426,7 +186,7 @@ const SnellSim = () => {
       </div>
       <div className="flex-1 flex items-center justify-center bg-[#F9F9F9] border border-[#E0E0E0] relative min-h-[300px]">
          <div className="absolute top-2 left-2 p-2 bg-white border border-[#E0E0E0]">
-            Angle of Refraction: {!isNaN(theta2) ? theta2.toFixed(2) + '°' : 'TIR'}
+            Angle of Refraction: {!totalInternalReflection ? theta2.toFixed(2) + '°' : 'TIR'}
          </div>
          <svg width="300" height="300" viewBox="0 0 300 300">
             <rect x="0" y="0" width="300" height="150" fill="white" />
@@ -435,7 +195,7 @@ const SnellSim = () => {
              <text x="10" y="290" fontSize="10" fill="#999">n2={n2}</text>
             <line x1="150" y1="50" x2="150" y2="250" stroke="#ccc" strokeDasharray="4 4" />
             <line x1={x1} y1={y1} x2="150" y2="150" stroke="black" strokeWidth="2" />
-            {!isNaN(theta2) ? (
+            {!totalInternalReflection ? (
                 <line x1="150" y1="150" x2={x2} y2={y2} stroke="red" strokeWidth="2" />
             ) : (
                 <line x1="150" y1="150" x2={300-x1} y2={y1} stroke="red" strokeWidth="2" strokeDasharray="2 2" />
@@ -517,28 +277,14 @@ const LVSim = () => {
     const [gamma, setGamma] = React.useState(0.3); 
     const [delta, setDelta] = React.useState(0.01); 
 
-    const data = React.useMemo(() => {
-        const d = [];
-        let prey = 40;
-        let pred = 9;
-        const dt = 0.5;
-        
-        for(let t=0; t<200; t++) {
-            const dPrey = (alpha * prey - beta * prey * pred) * dt;
-            const dPred = (delta * prey * pred - gamma * pred) * dt;
-            prey += dPrey;
-            pred += dPred;
-            d.push({t, prey: Math.max(0, prey), pred: Math.max(0, pred)});
-        }
-        return d;
-    }, [alpha, beta, gamma, delta]);
+    const data = React.useMemo(() => predatorPrey(alpha, beta, gamma, delta), [alpha, beta, gamma, delta]);
 
     return (
         <div className="h-full w-full p-6 flex flex-col gap-6 font-mono text-xs">
             <div className="border-b border-[#E0E0E0] pb-4">
                 <h2 className="text-xl font-bold uppercase tracking-tight mb-2">Lotka-Volterra (Predator-Prey)</h2>
                 <p className="text-sm text-[#555555] max-w-3xl leading-relaxed">
-                    Shows the cyclic population dynamics between biological species. 
+                    Ideal Lotka-Volterra model with no carrying capacity. Time is in model units; positive populations are integrated with a 0.01 timestep using RK4 in log coordinates.
                     Prey population grows (Alpha) but is eaten by Predators (Beta). Predators thrive when prey is abundant (Delta) but die off without food (Gamma).
                 </p>
             </div>
@@ -1134,92 +880,7 @@ const GoldenSim = () => {
 render(<GoldenSim />);
 `;
 
-const BUBBLE_CODE = `
-const BubbleSim = () => {
-  const [count, setCount] = React.useState(20);
-  const [array, setArray] = React.useState([]);
-  const [sorting, setSorting] = React.useState(false);
-  const [currentIdx, setCurrentIdx] = React.useState(-1);
-  const [speed, setSpeed] = React.useState(50);
-  const speedRef = React.useRef(50);
-  const mountedRef = React.useRef(true);
-
-  React.useEffect(() => {
-      speedRef.current = speed;
-  }, [speed]);
-
-  React.useEffect(() => {
-    mountedRef.current = true;
-    const arr = Array.from({length: count}, () => Math.floor(Math.random() * 100) + 10);
-    setArray(arr);
-    return () => { mountedRef.current = false; };
-  }, [count]);
-
-  const sort = async () => {
-    if(sorting) return;
-    setSorting(true);
-    const arr = [...array];
-    for(let i=0; i<arr.length; i++) {
-        for(let j=0; j<arr.length-i-1; j++) {
-            if(!mountedRef.current) return;
-            setCurrentIdx(j);
-            // Always delay to visualize comparisons, even if no swap
-            await new Promise(r => setTimeout(r, speedRef.current));
-            
-            if(arr[j] > arr[j+1]) {
-                const temp = arr[j];
-                arr[j] = arr[j+1];
-                arr[j+1] = temp;
-                if(mountedRef.current) setArray([...arr]);
-            }
-        }
-    }
-    if(mountedRef.current) {
-        setCurrentIdx(-1);
-        setSorting(false);
-    }
-  };
-
-  return (
-    <div className="h-full w-full p-6 flex flex-col gap-6 font-mono text-xs">
-        <div className="border-b border-[#E0E0E0] pb-4">
-            <h2 className="text-xl font-bold uppercase tracking-tight mb-2">Bubble Sort Algorithm</h2>
-            <p className="text-sm text-[#555555] max-w-3xl leading-relaxed">
-                A simple sorting algorithm that repeatedly steps through the list, compares adjacent elements and swaps them if they are in the wrong order. 
-                Red bars indicate the current comparison pair.
-            </p>
-        </div>
-        <div className="flex flex-col gap-4 mb-4 border-b border-[#E0E0E0] pb-4">
-            <div className="flex justify-between items-center">
-                 <div className="flex gap-4 items-center flex-1">
-                    <div className="flex flex-col w-1/3">
-                        <label>Elements: {count}</label>
-                        <input type="range" min="10" max="50" value={count} disabled={sorting} onChange={e=>setCount(Number(e.target.value))} />
-                    </div>
-                     <div className="flex flex-col w-1/3">
-                        <label>Delay: {speed}ms (Speed)</label>
-                        <input type="range" min="10" max="500" step="10" value={speed} onChange={e=>setSpeed(Number(e.target.value))} />
-                    </div>
-                </div>
-                <button onClick={sort} disabled={sorting} className="bg-black text-white px-4 py-2 uppercase hover:opacity-80 disabled:opacity-50">
-                    {sorting ? 'Sorting...' : 'Start Sort'}
-                </button>
-            </div>
-        </div>
-        <div className="flex-1 flex items-end justify-center gap-[1px] min-h-[300px]">
-            {array.map((val, idx) => (
-                <div 
-                    key={idx} 
-                    style={{ height: val + '%' }} 
-                    className={"flex-1 transition-all " + (idx === currentIdx || idx === currentIdx + 1 ? 'bg-red-500' : 'bg-black')}
-                ></div>
-            ))}
-        </div>
-    </div>
-  );
-};
-render(<BubbleSim />);
-`;
+const BUBBLE_CODE = `render(<TraceSimulation id="bubble" title="Bubble Sort" />);`;
 
 const BINARY_CODE = `
 const BinarySim = () => {
@@ -1561,7 +1222,7 @@ const FSMSim = () => {
                 <h2 className="text-xl font-bold uppercase tracking-tight mb-2">Finite State Machine (FSM)</h2>
                 <p className="text-sm text-[#555555] leading-relaxed">
                     A computation model that can be in exactly one of a finite number of states at any given time.
-                    This traffic light moves sequentially: RED -> GREEN -> YELLOW -> RED based on a timer.
+                    This traffic light moves sequentially: RED → GREEN → YELLOW → RED based on a timer.
                 </p>
             </div>
             <div className="bg-[#333] p-4 rounded-none flex flex-col gap-4 shadow-lg">
@@ -1632,60 +1293,7 @@ const RelativitySim = () => {
 render(<RelativitySim />);
 `;
 
-const NEWTON_CODE = `
-const NewtonOrbit = () => {
-    const [t, setT] = React.useState(0);
-    const [ecc, setEcc] = React.useState(0.0);
-
-    React.useEffect(() => {
-        // Simple constant angle speed approx for viz
-        const interval = setInterval(() => setT(prev => (prev + 0.02) % (2 * Math.PI)), 16);
-        return () => clearInterval(interval);
-    }, []);
-
-    // Elliptical orbit approx:
-    // a = semi-major axis, b = semi-minor axis
-    const cx = 150, cy = 150;
-    const a = 100;
-    const b = a * Math.sqrt(1 - ecc * ecc);
-    
-    // Focus distance c = a*e. Sun is at one focus.
-    const fDist = a * ecc;
-    const sunX = cx - fDist;
-
-    // Position
-    const x = cx + a * Math.cos(t);
-    const y = cy + b * Math.sin(t);
-
-    return (
-        <div className="h-full w-full p-6 flex flex-col gap-6 font-mono text-xs">
-            <div className="border-b border-[#E0E0E0] pb-4">
-                <h2 className="text-xl font-bold uppercase tracking-tight mb-2">Universal Gravitation (Newton, 1687)</h2>
-                <div className="text-[10px] bg-black text-white inline-block px-2 py-0.5 mb-2">PAPER: PRINCIPIA MATHEMATICA</div>
-                <p className="text-sm text-[#555555] max-w-3xl leading-relaxed">
-                    Describes planetary motion. Planets follow elliptical orbits with the Star at one focus.
-                    Eccentricity (e) determines how 'stretched' the orbit is. e=0 is a circle.
-                </p>
-            </div>
-            <div className="border-b border-[#E0E0E0] pb-4">
-                <label>Eccentricity (e): {ecc.toFixed(2)}</label>
-                <input className="w-full mt-2" type="range" min="0" max="0.8" step="0.01" value={ecc} onChange={e=>setEcc(Number(e.target.value))} />
-            </div>
-            <div className="flex-1 flex items-center justify-center bg-[#F9F9F9] relative min-h-[300px]">
-                <svg width="300" height="300" viewBox="0 0 300 300">
-                    <ellipse cx={cx} cy={cy} rx={a} ry={b} fill="none" stroke="#ccc" strokeDasharray="3 3" />
-                    {/* Sun at Focus */}
-                    <circle cx={sunX} cy={cy} r="12" fill="#FFD700" stroke="black" />
-                    {/* Planet */}
-                    <line x1={sunX} y1={cy} x2={x} y2={y} stroke="#999" opacity="0.5"/>
-                    <circle cx={x} cy={y} r="6" fill="black" />
-                </svg>
-            </div>
-        </div>
-    );
-};
-render(<NewtonOrbit />);
-`;
+const NEWTON_CODE = `render(<PhysicsSimulation id="orbit" />);`;
 
 const SCHRODINGER_CODE = `
 const SchrodingerBox = () => {
@@ -2300,7 +1908,7 @@ const PerceptronSim = () => {
                 <div className="text-[10px] bg-black text-white inline-block px-2 py-0.5 mb-2">PAPER: THE PERCEPTRON: A PROBABILISTIC MODEL</div>
                 <p className="text-sm text-[#555555] max-w-3xl leading-relaxed">
                     The ancestor of modern neural networks. It computes a weighted sum of inputs plus a bias. 
-                    If the result > 0, it fires. Adjust weights to separate the black dot (1,1) from the white dots.
+                    If the result is greater than zero, it fires. Adjust weights to separate the black dot (1,1) from the white dots.
                 </p>
             </div>
             <div className="flex gap-4 border-b border-[#E0E0E0] pb-4">
@@ -2312,11 +1920,14 @@ const PerceptronSim = () => {
                 <div className="relative w-[200px] h-[200px] border border-black bg-white">
                     {/* Decision Boundary: w1*x + w2*y + b = 0 => y = (-w1*x - b) / w2 */}
                     <svg className="absolute inset-0 w-full h-full overflow-visible">
-                        <line 
-                            x1="0" y1={200 - ((-w1*0 - bias)/w2 * 200)} 
-                            x2="200" y2={200 - ((-w1*1 - bias)/w2 * 200)} 
-                            stroke="red" strokeWidth="2" strokeDasharray="4 4"
-                        />
+                        {Math.abs(w2) > 1e-9 ? <line
+                            x1="0" y1={200 - ((-bias)/w2 * 200)}
+                            x2="200" y2={200 - ((-w1 - bias)/w2 * 200)}
+                            stroke="#b22" strokeWidth="2" strokeDasharray="4 4"
+                        /> : Math.abs(w1) > 1e-9 ? <line
+                            x1={-bias/w1*200} x2={-bias/w1*200} y1="0" y2="200"
+                            stroke="#b22" strokeWidth="2" strokeDasharray="4 4"
+                        /> : null}
                     </svg>
                     {points.map((p, i) => {
                         const out = activate(p.x, p.y);
@@ -2865,7 +2476,23 @@ render(<AttentionSim />);
 `;
 
 // Helper to create base64 text for file data
-const txtToBase64 = (str: string) => btoa(str);
+const txtToBase64 = (str: string) => btoa(Array.from(new TextEncoder().encode(str), byte => String.fromCharCode(byte)).join(''));
+
+const csConcept = (id: string, label: string, subcategory: string, prompt: string): LibraryItem => {
+  const filename = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  return {
+    id,
+    label,
+    cachedCode: createCachedCSCode({ id, title: label, subcategory, description: prompt }),
+    fileData: {
+      name: `${filename}.txt`,
+      type: 'text/plain',
+      data: txtToBase64(`${label}. Current teaching model: ${lessons[id].assumptions} Available inputs: ${lessons[id].parameters.map(p => p.label).join(", ")}. Broader exploration, not necessarily implemented in the cached model: ${prompt}`),
+      category: 'Computer Science',
+      subcategory,
+    },
+  };
+};
 
 export const LIBRARY_DATA: LibraryCategory[] = [
   {
@@ -3071,51 +2698,155 @@ export const LIBRARY_DATA: LibraryCategory[] = [
       label: 'Computer Science',
       subcategories: [
           {
-              id: 'algorithms',
-              label: 'Algorithms',
+              id: 'cs-foundations',
+              label: '01 · Computing Foundations',
+              items: [
+                  csConcept('cs_binary_numbers', 'Binary Numbers & Bitwise Operations', 'Computing Foundations', 'Visualize decimal, binary, and hexadecimal representations with interactive bit toggles and AND, OR, XOR, NOT, and shift operations.'),
+                  csConcept('cs_boolean_algebra', 'Boolean Algebra', 'Computing Foundations', 'Let users build Boolean expressions, compare truth tables, and see De Morgan laws and simplification steps.'),
+                  {
+                      id: 'logic_gates',
+                      label: 'Logic Gates',
+                      cachedCode: LOGIC_CODE,
+                      fileData: { name: 'logic_gates.txt', type: 'text/plain', data: txtToBase64("Basic digital logic gates."), category: 'Computer Science', subcategory: 'Computing Foundations' }
+                  },
+                  csConcept('cs_text_encoding', 'Text Encoding', 'Computing Foundations', 'Show how characters become Unicode code points and UTF-8 bytes, with bit-level views and byte-size comparisons.'),
+                  csConcept('cs_variables_memory', 'Variables, Types & Memory', 'Computing Foundations', 'Model typed values occupying stack memory, showing addresses, byte widths, assignment, copying, and mutation.'),
+                  csConcept('cs_control_flow', 'Control Flow', 'Computing Foundations', 'Animate conditionals, loops, and branching through a simple program with step controls and a visible program counter.'),
+                  {
+                      id: 'fsm',
+                      label: 'Finite State Machine',
+                      cachedCode: FSM_CODE,
+                      fileData: { name: 'fsm_traffic.txt', type: 'text/plain', data: txtToBase64("Traffic light FSM."), category: 'Computer Science', subcategory: 'Computing Foundations' }
+                  }
+              ]
+          },
+          {
+              id: 'cs-programming',
+              label: '02 · Programming & Complexity',
+              items: [
+                  csConcept('cs_functions_call_stack', 'Functions & the Call Stack', 'Programming & Complexity', 'Step through nested function calls while visualizing stack frames, parameters, local variables, return values, and stack unwinding.'),
+                  csConcept('cs_recursion', 'Recursion', 'Programming & Complexity', 'Compare recursive factorial and Fibonacci execution trees with base cases, stack depth, and repeated work.'),
+                  {
+                      id: 'hanoi',
+                      label: 'Towers of Hanoi',
+                      cachedCode: HANOI_CODE,
+                      fileData: { name: 'hanoi.txt', type: 'text/plain', data: txtToBase64("Recursive Towers of Hanoi solution."), category: 'Computer Science', subcategory: 'Programming & Complexity' }
+                  },
+                  csConcept('cs_algorithmic_complexity', 'Time & Space Complexity', 'Programming & Complexity', 'Plot constant, logarithmic, linear, n log n, quadratic, and exponential growth while users change input size and compare operation counts.'),
+                  csConcept('cs_abstract_data_types', 'Abstract Data Types', 'Programming & Complexity', 'Compare interface versus implementation using list, stack, queue, and set operations with interchangeable backing structures.'),
+                  csConcept('cs_race_conditions', 'Concurrency & Race Conditions', 'Programming & Complexity', 'Interleave two threads incrementing shared state and let users add synchronization to expose and prevent lost updates.')
+              ]
+          },
+          {
+              id: 'cs-data-structures',
+              label: '03 · Data Structures',
+              items: [
+                  csConcept('cs_arrays', 'Arrays & Dynamic Arrays', 'Data Structures', 'Visualize indexed storage, insertion shifts, capacity growth, amortized resizing, and memory layout.'),
+                  csConcept('cs_linked_lists', 'Linked Lists', 'Data Structures', 'Build singly and doubly linked lists with pointer traversal, insertion, deletion, and node relinking.'),
+                  csConcept('cs_stacks_queues', 'Stacks & Queues', 'Data Structures', 'Compare LIFO and FIFO behavior using enqueue, dequeue, push, and pop operations with live state diagrams.'),
+                  csConcept('cs_hash_tables', 'Hash Tables', 'Data Structures', 'Visualize hashing, bucket placement, collisions, load factor, chaining, open addressing, and resizing.'),
+                  csConcept('cs_union_find', 'Disjoint Sets / Union-Find', 'Data Structures', 'Animate union and find operations, comparing naive trees with union by rank and path compression.')
+              ]
+          },
+          {
+              id: 'cs-algorithms',
+              label: '04 · Algorithms',
               items: [
                   {
                       id: 'bubble',
                       label: 'Bubble Sort',
                       cachedCode: BUBBLE_CODE,
-                      fileData: { name: 'bubble_sort.txt', type: 'text/plain', data: txtToBase64("Bubble sort visualization."), category: 'CS' }
+                      fileData: { name: 'bubble_sort.txt', type: 'text/plain', data: txtToBase64("Bubble sort visualization."), category: 'Computer Science', subcategory: 'Algorithms' }
                   },
-                   {
+                  csConcept('cs_insertion_sort', 'Insertion Sort', 'Algorithms', 'Animate the sorted prefix, comparisons, and shifts for insertion sort with adjustable input size and speed.'),
+                  csConcept('cs_merge_sort', 'Merge Sort', 'Algorithms', 'Visualize recursive splitting and merging as a tree, tracking comparisons, temporary arrays, and n log n growth.'),
+                  csConcept('cs_quicksort', 'Quicksort', 'Algorithms', 'Animate pivot selection, partitioning, recursive ranges, and performance differences across input distributions.'),
+                  {
                       id: 'binary',
                       label: 'Binary Search',
                       cachedCode: BINARY_CODE,
-                      fileData: { name: 'binary_search.txt', type: 'text/plain', data: txtToBase64("Binary search algorithm."), category: 'CS' }
+                      fileData: { name: 'binary_search.txt', type: 'text/plain', data: txtToBase64("Binary search algorithm."), category: 'Computer Science', subcategory: 'Algorithms' }
                   },
-                   {
+                  {
                       id: 'bfs',
                       label: 'Breadth-First Search',
                       cachedCode: BFS_CODE,
-                      fileData: { name: 'bfs_flood.txt', type: 'text/plain', data: txtToBase64("BFS flood fill algorithm."), category: 'CS' }
+                      fileData: { name: 'bfs_flood.txt', type: 'text/plain', data: txtToBase64("BFS flood fill algorithm."), category: 'Computer Science', subcategory: 'Algorithms' }
                   },
-                   {
-                      id: 'hanoi',
-                      label: 'Towers of Hanoi',
-                      cachedCode: HANOI_CODE,
-                      fileData: { name: 'hanoi.txt', type: 'text/plain', data: txtToBase64("Recursive Towers of Hanoi solution."), category: 'CS' }
-                  }
+                  csConcept('cs_depth_first_search', 'Depth-First Search', 'Algorithms', 'Explore a graph with recursive and iterative DFS, showing the call stack, visited set, discovery order, and backtracking.'),
+                  csConcept('cs_dynamic_programming', 'Dynamic Programming', 'Algorithms', 'Compare naive recursion, memoization, and bottom-up tabulation for a configurable optimization problem.')
               ]
           },
           {
-              id: 'logic',
-              label: 'Digital Logic',
+              id: 'cs-architecture',
+              label: '05 · Computer Architecture',
               items: [
-                  {
-                      id: 'logic_gates',
-                      label: 'Logic Gates',
-                      cachedCode: LOGIC_CODE,
-                      fileData: { name: 'logic_gates.txt', type: 'text/plain', data: txtToBase64("Basic digital logic gates."), category: 'CS' }
-                  },
-                  {
-                      id: 'fsm',
-                      label: 'Finite State Machine',
-                      cachedCode: FSM_CODE,
-                      fileData: { name: 'fsm_traffic.txt', type: 'text/plain', data: txtToBase64("Traffic light FSM."), category: 'CS' }
-                  }
+                  csConcept('cs_instruction_cycle', 'CPU Instruction Cycle', 'Computer Architecture', 'Step through fetch, decode, execute, memory, and write-back stages while registers and the program counter update.'),
+                  csConcept('cs_cpu_pipelining', 'CPU Pipelining', 'Computer Architecture', 'Animate instructions across pipeline stages and expose data, control, and structural hazards with stalls and forwarding.'),
+                  csConcept('cs_cache_hierarchy', 'Cache Hierarchy', 'Computer Architecture', 'Model L1, L2, L3, and main-memory access with locality, cache lines, hit rates, and replacement policies.'),
+                  csConcept('cs_virtual_memory', 'Virtual Memory & Paging', 'Computer Architecture', 'Translate virtual addresses through page tables and a TLB, showing page hits, faults, frames, and replacement.'),
+                  csConcept('cs_branch_prediction', 'Branch Prediction', 'Computer Architecture', 'Compare static and dynamic branch predictors with adjustable instruction patterns, pipeline flushes, and accuracy metrics.')
+              ]
+          },
+          {
+              id: 'cs-operating-systems',
+              label: '06 · Operating Systems',
+              items: [
+                  csConcept('cs_process_scheduling', 'Process Scheduling', 'Operating Systems', 'Compare FCFS, shortest-job-first, priority, and round-robin scheduling with Gantt charts and wait-time metrics.'),
+                  csConcept('cs_context_switching', 'Threads & Context Switching', 'Operating Systems', 'Visualize thread states, CPU time slices, saved register contexts, and the overhead of context switches.'),
+                  csConcept('cs_synchronization', 'Locks & Synchronization', 'Operating Systems', 'Let concurrent workers access a critical section using mutexes, semaphores, and condition variables.'),
+                  csConcept('cs_deadlock', 'Deadlock', 'Operating Systems', 'Build a resource-allocation graph and demonstrate the four deadlock conditions, detection, avoidance, and recovery.'),
+                  csConcept('cs_file_systems', 'File Systems', 'Operating Systems', 'Visualize directories, inodes, blocks, allocation strategies, fragmentation, and file reads and writes.')
+              ]
+          },
+          {
+              id: 'cs-databases',
+              label: '07 · Databases',
+              items: [
+                  csConcept('cs_btree_indexes', 'B-Tree Indexes', 'Databases', 'Animate B-tree search, insertion, node splitting, and range scans with adjustable branching factor.'),
+                  csConcept('cs_relational_joins', 'Relational Joins', 'Databases', 'Compare nested-loop, hash, and merge joins with two editable tables and visible intermediate results.'),
+                  csConcept('cs_query_planning', 'Query Planning', 'Databases', 'Build alternative query execution trees and compare scan, filter, join, cardinality, and estimated cost choices.'),
+                  csConcept('cs_acid_transactions', 'ACID Transactions', 'Databases', 'Simulate concurrent bank transfers to illustrate atomicity, consistency, isolation, durability, commit, and rollback.')
+              ]
+          },
+          {
+              id: 'cs-networks',
+              label: '08 · Networks & Distributed Systems',
+              items: [
+                  csConcept('cs_packet_switching', 'Packet Switching', 'Networks & Distributed Systems', 'Route packets through a network with queues, bandwidth, latency, packet loss, and alternate paths.'),
+                  csConcept('cs_tcp_congestion', 'TCP Congestion Control', 'Networks & Distributed Systems', 'Plot congestion window changes through slow start, avoidance, packet loss, fast retransmit, and recovery.'),
+                  csConcept('cs_dns_resolution', 'DNS Resolution', 'Networks & Distributed Systems', 'Trace a domain lookup through browser cache, recursive resolver, root, TLD, and authoritative name servers.'),
+                  csConcept('cs_load_balancing', 'Load Balancing', 'Networks & Distributed Systems', 'Distribute requests using round robin, least connections, and weighted strategies while servers change health and capacity.'),
+                  csConcept('cs_raft_consensus', 'Raft Consensus', 'Networks & Distributed Systems', 'Simulate leader election and replicated logs across nodes with delays, partitions, term changes, and quorum decisions.')
+              ]
+          },
+          {
+              id: 'cs-security',
+              label: '09 · Security',
+              items: [
+                  csConcept('cs_hashing_signatures', 'Hashing & Digital Signatures', 'Security', 'Show message hashing, avalanche effects, signing, verification, and how tampering invalidates a signature.'),
+                  csConcept('cs_symmetric_public_crypto', 'Symmetric vs Public-Key Cryptography', 'Security', 'Compare shared-key encryption and public-private key exchange through an interactive sender, channel, and receiver model.'),
+                  csConcept('cs_diffie_hellman', 'Diffie-Hellman Key Exchange', 'Security', 'Visualize modular exponentiation and how two parties derive a shared secret over a public channel.'),
+                  csConcept('cs_access_control', 'Authentication & Access Control', 'Security', 'Model identities, sessions, roles, permissions, and access decisions across RBAC and least-privilege policies.')
+              ]
+          },
+          {
+              id: 'cs-ai',
+              label: '10 · Artificial Intelligence',
+              items: [
+                  csConcept('cs_gradient_descent', 'Gradient Descent', 'Artificial Intelligence', 'Visualize a point descending a loss surface with adjustable learning rate, momentum, noise, and convergence history.'),
+                  csConcept('cs_decision_trees', 'Decision Trees', 'Artificial Intelligence', 'Build classification splits from sample data using entropy and information gain, then trace predictions through the tree.'),
+                  csConcept('cs_backpropagation', 'Neural Networks & Backpropagation', 'Artificial Intelligence', 'Train a small neural network while showing activations, loss, gradients, weight updates, and decision boundaries.'),
+                  csConcept('cs_reinforcement_learning', 'Reinforcement Learning', 'Artificial Intelligence', 'Train an agent in a grid world using rewards, exploration, Q-values, policies, and episode-by-episode learning curves.')
+              ]
+          },
+          {
+              id: 'cs-theory-compilers',
+              label: '11 · Theory & Compilers',
+              items: [
+                  csConcept('cs_automata_languages', 'Automata & Formal Languages', 'Theory & Compilers', 'Build regular expressions, finite automata, and transition tables, then test strings for acceptance.'),
+                  csConcept('cs_compiler_pipeline', 'Compiler Pipeline', 'Theory & Compilers', 'Transform editable source code through tokenization, parsing, an abstract syntax tree, optimization, and generated instructions.'),
+                  csConcept('cs_computability_complexity', 'Computability & Complexity Classes', 'Theory & Compilers', 'Explore decidable versus undecidable problems and compare P, NP, NP-complete, and exponential search spaces.')
               ]
           }
       ]

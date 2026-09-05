@@ -1,15 +1,24 @@
-import React, { useEffect, useRef, useState, ReactNode, ErrorInfo } from 'react';
-import { createRoot, Root } from 'react-dom/client';
+import React, { useCallback, useEffect, useRef, useState, ReactNode, ErrorInfo } from 'react';
 import * as Recharts from 'recharts';
 import * as LucideReact from 'lucide-react';
 import { Activity, RefreshCw } from 'lucide-react';
 import { SimFrame, Control, Stat } from './SimSDK';
+import { CanvasFit } from './CanvasFit';
+import { TraceSimulation } from './TraceSimulation';
+import { PhysicsSimulation } from './PhysicsSimulation';
+import { predatorPrey } from '../simulations/physics';
+import { useSimulationTimeline, PlaybackControls, ModelNotes } from '../simulations/playback';
+import { seededRandom } from '../simulations/model';
+import { validateRegistration, SimulationRegistration } from '../simulations/validation';
+import { SimulationObservationContext, useSimulationSnapshot } from '../simulations/observation';
 
 interface SimulationCanvasProps {
   code: string;
   onRegenerate?: () => void;
   onError?: (error: string) => void;
   isCached?: boolean;
+  showToolbar?: boolean;
+  onSnapshot?: (snapshot: string) => void;
 }
 
 interface ErrorBoundaryProps {
@@ -57,9 +66,9 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 }
 
-const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ code, onRegenerate, onError, isCached }) => {
+const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ code, onRegenerate, onError, isCached, showToolbar = true, onSnapshot }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const rootRef = useRef<Root | null>(null);
+  const [renderedSimulation, setRenderedSimulation] = useState<ReactNode>(null);
   const [error, setError] = useState<string | null>(null);
 
   // When props.onError is triggered, we want to call it. 
@@ -67,24 +76,20 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ code, onRegenerate,
   const onErrorRef = useRef(onError);
   useEffect(() => { onErrorRef.current = onError; }, [onError]);
 
+  const handleRenderedError = useCallback((renderError: Error) => {
+    const message = renderError.message;
+    setError(message);
+    onErrorRef.current?.(message);
+  }, []);
+
   useEffect(() => {
     if (!containerRef.current || !code) return;
     setError(null);
-
-    const rootElement = containerRef.current;
-    
-    if (rootRef.current) {
-      try {
-        rootRef.current.unmount();
-      } catch (e) {
-        console.warn("Failed to unmount previous root", e);
-      }
-      rootRef.current = null;
-    }
-
-    rootElement.innerHTML = "";
+    setRenderedSimulation(null);
 
     try {
+      let compiledSimulation: ReactNode = null;
+      let registered = false;
       const reactHooks = {
         useState: React.useState,
         useEffect: React.useEffect,
@@ -98,11 +103,8 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ code, onRegenerate,
         useDebugValue: React.useDebugValue,
       };
 
-      // Normalize modules to handle both default and named exports
-      // @ts-ignore
-      const RechartsModule = Recharts.default || Recharts;
-      // @ts-ignore
-      const LucideModule = { ...LucideReact, ...(LucideReact.default || {}) };
+      const RechartsModule = Recharts;
+      const LucideModule = LucideReact;
 
       const customRequire = (moduleName: string) => {
         if (moduleName === 'react') return React;
@@ -111,26 +113,30 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ code, onRegenerate,
         if (moduleName === 'lucide-react' || moduleName === 'lucide_react' || moduleName.startsWith('lucide-react')) {
             return { ...LucideModule, ...reactHooks };
         }
-        console.warn(`Simulation attempted to require unknown module: ${moduleName}`);
-        return {}; 
+        throw new Error(`Unsupported simulation module: ${moduleName}`);
       };
 
       const exportsObj = {};
       const moduleObj = { exports: exportsObj };
-
-      const handleError = (e: Error | string) => {
-          const msg = e instanceof Error ? e.message : String(e);
-          setError(msg);
-          if (onErrorRef.current) {
-              onErrorRef.current(msg);
-          }
-      };
 
       // Provide extensive scope to catch hallucinated variables
       const scope = {
         React,
         ...React,
         // UI SDK
+        registerSimulation: (model: SimulationRegistration) => {
+          if (registered) throw new Error('Register only one simulation model.');
+          validateRegistration(model);
+          registered = true;
+        },
+        useSimulationSnapshot,
+        PhysicsSimulation,
+        predatorPrey,
+        TraceSimulation,
+        useSimulationTimeline,
+        PlaybackControls,
+        ModelNotes,
+        seededRandom,
         SimFrame,
         Control,
         Stat,
@@ -148,13 +154,7 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ code, onRegenerate,
         module: moduleObj,
         global: window,
         render: (component: ReactNode) => {
-            const internalRoot = createRoot(rootElement);
-            rootRef.current = internalRoot;
-            internalRoot.render(
-                <ErrorBoundary onError={(e) => handleError(e)}>
-                    {component}
-                </ErrorBoundary>
-            );
+          compiledSimulation = component;
         }
       };
 
@@ -163,14 +163,17 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ code, onRegenerate,
         throw new Error("Babel not loaded. Cannot compile simulation.");
       }
 
-      // Remove export default and other potential syntax issues
+      // Generated imports are compiled to calls through customRequire above.
+      // Only remove a default export because simulations render through render().
       const cleanCode = code
-        .replace(/^\s*export\s+default\s+[\w\d_]+;?/gm, '')
-        .replace(/^\s*import\s+.*?;/gm, ''); // We handle imports via require logic in transpilation usually, but simple cleaning helps
+        .replace(/^\s*export\s+default\s+[\w\d_]+;?/gm, '');
 
       // @ts-ignore
-      const transpiled = window.Babel.transform(code, {
-        presets: ['react', 'env'],
+      const transpiled = window.Babel.transform(cleanCode, {
+        presets: [
+          ['react', { runtime: 'classic' }],
+          ['env', { modules: 'commonjs' }],
+        ],
         filename: 'simulation.tsx',
       }).code;
 
@@ -180,28 +183,28 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ code, onRegenerate,
       const executable = new Function(...scopeKeys, transpiled);
       executable(...scopeValues);
 
+      if (code.startsWith('// @simulation-model-v1') && !registered) {
+        throw new Error('Generated simulation must register its assumptions and executable model checks.');
+      }
+      if (compiledSimulation === null) {
+        throw new Error("Simulation did not render a component.");
+      }
+      setRenderedSimulation(compiledSimulation);
+
     } catch (err) {
       console.error("Simulation Runtime Error:", err);
       const msg = err instanceof Error ? err.message : "Unknown runtime error";
+      setRenderedSimulation(null);
       setError(msg);
       // Trigger error callback for immediate compilation errors
       if (onErrorRef.current) onErrorRef.current(msg);
     }
     
-    return () => {
-        if (rootRef.current) {
-            try {
-                rootRef.current.unmount();
-            } catch(e) {}
-            rootRef.current = null;
-        }
-    };
-
   }, [code]);
 
   return (
     <div className="w-full h-full relative bg-white overflow-hidden flex flex-col">
-       <div className="flex-none h-10 border-b border-[#E0E0E0] bg-[#FEFEFE] flex items-center justify-end px-4 gap-2 z-10">
+       {showToolbar && <div className="flex-none h-10 border-b border-[#E0E0E0] bg-[#FEFEFE] flex items-center justify-end px-4 gap-2 z-10">
             {isCached && onRegenerate && (
                 <button 
                     onClick={onRegenerate}
@@ -215,9 +218,15 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ code, onRegenerate,
                 <div className="h-1.5 w-1.5 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-[10px] text-black font-bold tracking-wider uppercase">Live Env</span>
             </div>
-       </div>
+       </div>}
 
-       <div ref={containerRef} className="flex-1 w-full min-h-0 relative z-0 overflow-y-auto" id="simulation-root"></div>
+       <div ref={containerRef} className="flex-1 w-full min-h-0 relative z-0 overflow-hidden" id="simulation-root">
+         {renderedSimulation && (
+           <SimulationObservationContext.Provider value={onSnapshot}><ErrorBoundary key={code} onError={handleRenderedError}>
+             {/\b(?:SimFrame|TraceSimulation|PhysicsSimulation)\b/.test(code) ? renderedSimulation : <CanvasFit>{renderedSimulation}</CanvasFit>}
+           </ErrorBoundary></SimulationObservationContext.Provider>
+         )}
+       </div>
 
        {error && (
          <div className="absolute inset-0 bg-white/95 flex items-center justify-center p-8 z-50">

@@ -74,7 +74,9 @@ const QnAPanel: React.FC<QnAPanelProps> = ({ file, suggestions = [] }) => {
       const errorMsg: ChatMessage = {
         id: Math.random().toString(36).substring(7),
         role: 'ai',
-        text: "Error processing request.",
+        text: error instanceof Error
+          ? error.message
+          : 'The assistant is temporarily unavailable. Please try again in a moment.',
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMsg]);

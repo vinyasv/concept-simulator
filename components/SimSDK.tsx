@@ -1,6 +1,6 @@
-import React from 'react';
-
-// --- THE SIMULATION BOILERPLATE SDK ---
+import React from "react";
+import { Info, SlidersHorizontal, X } from "lucide-react";
+import { CanvasFit } from "./CanvasFit";
 
 interface SimFrameProps {
   title: string;
@@ -10,43 +10,104 @@ interface SimFrameProps {
   children: React.ReactNode;
 }
 
-export const SimFrame: React.FC<SimFrameProps> = ({ title, description, controls, stats, children }) => {
+export const SimFrame: React.FC<SimFrameProps> = ({
+  title,
+  description,
+  controls,
+  stats,
+  children,
+}) => {
+  const [panel, setPanel] = React.useState<"controls" | "about" | null>(null);
+  const frame = React.useRef<HTMLDivElement>(null);
+  const trigger = React.useRef<HTMLButtonElement | null>(null);
+  const panelId = React.useId();
+  React.useEffect(() => {
+    if (!panel) return;
+    const dismiss = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setPanel(null);
+        trigger.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", dismiss);
+    return () => document.removeEventListener("keydown", dismiss);
+  }, [panel]);
+  const toggle = (
+    next: "controls" | "about",
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    trigger.current = event.currentTarget;
+    setPanel((previous) => (previous === next ? null : next));
+  };
   return (
-    <div className="h-full w-full flex flex-col font-mono text-xs bg-white text-black overflow-hidden">
-      {/* HEADER SECTION */}
-      <div className="flex-none border-b border-[#E0E0E0] p-6 bg-white shrink-0">
-        <h2 className="text-xl font-bold uppercase tracking-tight mb-2 text-black">{title}</h2>
-        <p className="text-sm text-[#555555] max-w-4xl leading-relaxed">{description}</p>
+    <div className="sim-frame" ref={frame}>
+      <header className="sim-frame-header">
+        <h2 title={title}>{title}</h2>
+        <div className="sim-frame-actions">
+          <button
+            type="button"
+            onClick={(e) => toggle("about", e)}
+            aria-label="About this model"
+            aria-expanded={panel === "about"}
+          >
+            <Info size={15} />
+          </button>
+          {controls && (
+            <button
+              type="button"
+              onClick={(e) => toggle("controls", e)}
+              aria-expanded={panel === "controls"}
+              aria-controls={panelId}
+            >
+              <SlidersHorizontal size={14} /> Adjust
+            </button>
+          )}
+        </div>
+      </header>
+      <div className="sim-stage">
+        <CanvasFit>{children}</CanvasFit>
       </div>
-
-      {/* CONTROLS & STATS BAR */}
-      {/* FIX: Added max-height and overflow to prevent controls from eating the entire screen on small displays or complex sims */}
-      {(controls || stats) && (
-        <div className="flex-none border-b border-[#E0E0E0] bg-[#F9F9F9] shrink-0 max-h-[35vh] overflow-y-auto custom-scrollbar">
-          <div className="flex flex-col lg:flex-row min-h-min">
-             {/* Controls Area */}
-             {controls && (
-                <div className={`p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-4 ${stats ? 'lg:w-2/3 lg:border-r border-[#E0E0E0]' : 'w-full'}`}>
-                    {controls}
-                </div>
-             )}
-             
-             {/* Stats Area */}
-             {stats && (
-                <div className={`p-4 flex flex-wrap content-start gap-4 ${controls ? 'lg:w-1/3' : 'w-full'}`}>
-                    {stats}
-                </div>
-             )}
-          </div>
+      {stats && (
+        <div className="sim-readouts" aria-label="Model readings">
+          {stats}
         </div>
       )}
-
-      {/* VISUALIZATION CANVAS */}
-      <div className="flex-1 min-h-0 relative w-full h-full p-4 overflow-hidden bg-white">
-        <div className="w-full h-full border border-[#E0E0E0] relative overflow-hidden bg-[#FAFAFA]">
-            {children}
-        </div>
-      </div>
+      {panel && (
+        <>
+          <button
+            className="sim-inspector-dismiss"
+            aria-label="Close model panel"
+            onClick={() => setPanel(null)}
+          />
+          <section
+            className="sim-inspector"
+            role="dialog"
+            aria-label={
+              panel === "controls" ? "Model parameters" : "About this model"
+            }
+            id={panelId}
+          >
+            <header>
+              <span>
+                {panel === "controls" ? "Parameters" : "About this model"}
+              </span>
+              <button
+                type="button"
+                aria-label="Close model panel"
+                onClick={() => {
+                  setPanel(null);
+                  trigger.current?.focus();
+                }}
+              >
+                <X size={15} />
+              </button>
+            </header>
+            <div className="sim-inspector-content">
+              {panel === "controls" ? controls : <p>{description}</p>}
+            </div>
+          </section>
+        </>
+      )}
     </div>
   );
 };
@@ -56,40 +117,43 @@ interface ControlProps {
   value?: string | number;
   children: React.ReactNode;
 }
-
 export const Control: React.FC<ControlProps> = ({ label, value, children }) => {
+  const id = React.useId();
+  const labelable =
+    React.isValidElement<{ id?: string }>(children) &&
+    typeof children.type === "string" &&
+    ["input", "select", "textarea"].includes(children.type);
+  const controlId = labelable ? (children.props.id ?? id) : undefined;
+  const control = labelable
+    ? React.cloneElement(children, { id: controlId })
+    : children;
   return (
-    <div className="flex flex-col gap-1.5 w-full min-w-0">
-      <div className="flex justify-between items-baseline gap-2">
-        <label className="uppercase text-[10px] font-bold text-[#777] tracking-wider truncate shrink-0">{label}</label>
-        {value !== undefined && (
-            <span className="font-mono text-[10px] text-black bg-white border border-[#E0E0E0] px-1.5 truncate max-w-[50%]">
-                {value}
-            </span>
-        )}
+    <div className="sim-control">
+      <div className="sim-control-label">
+        <label htmlFor={controlId}>{label}</label>
+        {value !== undefined && <output>{value}</output>}
       </div>
-      <div className="w-full relative">
-        {children}
-      </div>
+      {control}
     </div>
   );
 };
-
 interface StatProps {
   label: string;
   value: string | number;
   unit?: string;
   highlight?: boolean;
 }
-
-export const Stat: React.FC<StatProps> = ({ label, value, unit, highlight }) => {
-  return (
-    <div className={`flex flex-col items-start px-3 py-2 border min-w-[100px] max-w-[200px] ${highlight ? 'bg-black text-white border-black' : 'bg-white text-black border-[#E0E0E0]'}`}>
-        <span className={`text-[9px] uppercase tracking-widest mb-1 truncate w-full ${highlight ? 'text-[#999]' : 'text-[#777]'}`}>{label}</span>
-        <div className="text-lg font-bold leading-none truncate w-full flex items-baseline gap-1">
-            <span>{value}</span>
-            {unit && <span className="text-[10px] font-normal opacity-70 shrink-0">{unit}</span>}
-        </div>
-    </div>
-  );
-};
+export const Stat: React.FC<StatProps> = ({
+  label,
+  value,
+  unit,
+  highlight,
+}) => (
+  <div className={`sim-stat ${highlight ? "is-highlighted" : ""}`}>
+    <span>{label}</span>
+    <strong>
+      {value}
+      {unit && <small>{unit}</small>}
+    </strong>
+  </div>
+);
