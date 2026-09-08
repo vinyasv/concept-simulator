@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import { GEMINI_MODEL_FALLBACK, GEMINI_MODEL_PRIMARY } from '../geminiModels';
+import { GEMINI_MODEL_FALLBACK, GEMINI_MODEL_PRIMARY } from '../geminiModels.js';
 
 interface GenerateRequest {
   apiKey: string;

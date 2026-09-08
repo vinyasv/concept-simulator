@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { GeminiGatewayError, generateWithFallback } from '../server/geminiGateway';
+import { GeminiGatewayError, generateWithFallback } from '../server/geminiGateway.js';
 
 export default async function handler(
   req: VercelRequest,
