@@ -43,6 +43,8 @@ export interface LibraryItem {
   id: string;
   label: string;
   fileData: FileData;
+  description?: string;
+  keywords?: string;
   cachedCode?: string; // Pre-generated React code
   url?: string;
 }

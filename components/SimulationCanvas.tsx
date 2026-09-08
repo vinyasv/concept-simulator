@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState, ReactNode, ErrorInfo } from 'react';
+import { PlaygroundSimulation } from './PlaygroundSimulation';
 import * as Recharts from 'recharts';
 import * as LucideReact from 'lucide-react';
 import { Activity, RefreshCw } from 'lucide-react';
@@ -133,6 +134,7 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ code, onRegenerate,
         PhysicsSimulation,
         predatorPrey,
         TraceSimulation,
+        PlaygroundSimulation,
         useSimulationTimeline,
         PlaybackControls,
         ModelNotes,
@@ -223,7 +225,7 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ code, onRegenerate,
        <div ref={containerRef} className="flex-1 w-full min-h-0 relative z-0 overflow-hidden" id="simulation-root">
          {renderedSimulation && (
            <SimulationObservationContext.Provider value={onSnapshot}><ErrorBoundary key={code} onError={handleRenderedError}>
-             {/\b(?:SimFrame|TraceSimulation|PhysicsSimulation)\b/.test(code) ? renderedSimulation : <CanvasFit>{renderedSimulation}</CanvasFit>}
+             {/\b(?:SimFrame|TraceSimulation|PhysicsSimulation|PlaygroundSimulation)\b/.test(code) ? renderedSimulation : <CanvasFit>{renderedSimulation}</CanvasFit>}
            </ErrorBoundary></SimulationObservationContext.Provider>
          )}
        </div>

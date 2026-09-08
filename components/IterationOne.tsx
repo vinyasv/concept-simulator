@@ -93,7 +93,7 @@ const IterationOne: React.FC<IterationOneProps> = ({ workspace }) => {
   return (
     <div className="concept-one">
       <header className="minimal-header">
-        <a className="minimal-brand" href="/1">
+        <a className="minimal-brand" href="/">
           Concept Simulator
         </a>
         <div className="minimal-header-actions">

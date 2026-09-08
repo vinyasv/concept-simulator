@@ -1,3 +1,4 @@
+import { PlaygroundSimulation } from "../components/PlaygroundSimulation";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -7,7 +8,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import * as Recharts from "recharts";
 import * as LucideReact from "lucide-react";
-import { LIBRARY_DATA } from "../constants";
+import { LIBRARY_DATA, DEMONSTRATION_LIBRARY_DATA } from "../constants";
 import { SimFrame, Control, Stat } from "../components/SimSDK";
 import { TraceSimulation } from "../components/TraceSimulation";
 import { PhysicsSimulation } from "../components/PhysicsSimulation";
@@ -20,9 +21,12 @@ import {
 import { useSimulationSnapshot } from "./observation";
 import { seededRandom } from "./model";
 
-const cases = LIBRARY_DATA.flatMap((c) =>
-  c.subcategories.flatMap((s) => s.items),
-).map((item) => ({ label: item.label, cachedCode: item.cachedCode }));
+const cases = [
+  ...LIBRARY_DATA,
+  ...DEMONSTRATION_LIBRARY_DATA.filter((c) => c.id === "cs"),
+]
+  .flatMap((c) => c.subcategories.flatMap((s) => s.items))
+  .map((item) => ({ label: item.label, cachedCode: item.cachedCode }));
 if (process.env.SIMULATION_SAMPLE)
   cases.push({
     label: "Fresh generated sample",
@@ -42,6 +46,7 @@ for (const item of cases) {
       Control,
       Stat,
       TraceSimulation,
+      PlaygroundSimulation,
       PhysicsSimulation,
       predatorPrey,
       PlaybackControls,

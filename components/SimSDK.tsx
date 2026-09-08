@@ -3,6 +3,7 @@ import { Info, SlidersHorizontal, X } from "lucide-react";
 import { CanvasFit } from "./CanvasFit";
 
 interface SimFrameProps {
+  compact?: boolean;
   title: string;
   description: string;
   controls?: React.ReactNode;
@@ -12,6 +13,7 @@ interface SimFrameProps {
 
 export const SimFrame: React.FC<SimFrameProps> = ({
   title,
+  compact = false,
   description,
   controls,
   stats,
@@ -40,7 +42,10 @@ export const SimFrame: React.FC<SimFrameProps> = ({
     setPanel((previous) => (previous === next ? null : next));
   };
   return (
-    <div className="sim-frame" ref={frame}>
+    <div
+      className={`sim-frame${compact ? " sim-frame--compact" : ""}`}
+      ref={frame}
+    >
       <header className="sim-frame-header">
         <h2 title={title}>{title}</h2>
         <div className="sim-frame-actions">

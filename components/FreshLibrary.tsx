@@ -13,7 +13,7 @@ interface FreshLibraryProps {
   onItemSelect: (item: LibraryItem) => void;
 }
 
-const catalog = LIBRARY_DATA.flatMap(category =>
+const makeCatalog = (library: typeof LIBRARY_DATA) => library.flatMap(category =>
   category.subcategories.flatMap(subcategory =>
     subcategory.items.map(item => ({
       item,
@@ -35,19 +35,20 @@ const FreshLibrary: React.FC<FreshLibraryProps> = ({
   onItemSelect,
 }) => {
   const [query, setQuery] = useState('');
+  const catalog = useMemo(() => makeCatalog(LIBRARY_DATA), []);
   const [activeCategory, setActiveCategory] = useState('All');
   const [uploadError, setUploadError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const categories = useMemo(() => ['All', ...LIBRARY_DATA.map(category => category.label)], []);
+  const categories = useMemo(() => ['All', ...new Set(catalog.map(row => row.category))], [catalog]);
   const results = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return catalog.filter(({ item, category, subcategory }) => {
       const matchesCategory = activeCategory === 'All' || category === activeCategory;
-      const haystack = `${item.label} ${category} ${subcategory}`.toLowerCase();
+      const haystack = `${item.label} ${item.description ?? ''} ${item.keywords ?? ''} ${category} ${subcategory}`.toLowerCase();
       return matchesCategory && (!normalizedQuery || haystack.includes(normalizedQuery));
     });
-  }, [activeCategory, query]);
+  }, [activeCategory, query, catalog]);
 
   const selectItem = (item: LibraryItem) => {
     onItemSelect(item);
@@ -159,7 +160,7 @@ const FreshLibrary: React.FC<FreshLibraryProps> = ({
                   <span className="catalog-row__index">{String(index + 1).padStart(2, '0')}</span>
                   <span className="catalog-row__copy">
                     <strong>{item.label}</strong>
-                    <small>{category}</small>
+                    <small>{item.description ?? category}</small>
                   </span>
                   <ArrowRight className="catalog-row__arrow" size={15} />
                 </button>

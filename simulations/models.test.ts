@@ -201,6 +201,20 @@ test("predator-prey stays positive and nearly preserves its analytic invariant",
 });
 const validSpec = {
   title: "Addition",
+  exploration: {
+    objects: ["Counting beads"],
+    firstAction: "Add a bead",
+    actions: [
+      {
+        verb: "Add",
+        target: "Bead tray",
+        consequence: "The tray gains one bead",
+      },
+    ],
+    feedback: "Count the visible beads",
+    invitation: "Can you make five?",
+    reset: "Restore two beads",
+  },
   question: "How does x change y?",
   assumptions: ["Integer arithmetic"],
   inputs: [
@@ -295,5 +309,31 @@ test("model specifications also support freeform text and named choices", () => 
         inputs: [{ ...textInput, options: ["a", "b"] }],
       }),
     ),
+  );
+});
+
+test("specifications require a concrete exploration contract", () => {
+  for (const exploration of [
+    undefined,
+    {},
+    { ...validSpec.exploration, actions: [] },
+    {
+      ...validSpec.exploration,
+      actions: [{ verb: "Push", target: "", consequence: "" }],
+    },
+  ]) {
+    assert.throws(
+      () => parseSpecification(JSON.stringify({ ...validSpec, exploration })),
+      /visible objects/,
+    );
+  }
+});
+
+test("repair extraction tolerates a lone trailing fence and repeated model markers", () => {
+  const raw =
+    "// @simulation-model-v1\n// @simulation-model-v1\nrender(<Demo/>);\n```";
+  assert.equal(
+    extractSimulationCode(raw),
+    "// @simulation-model-v1\nrender(<Demo/>);",
   );
 });

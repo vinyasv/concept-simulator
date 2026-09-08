@@ -4,6 +4,20 @@ The product keeps a small shared UI and lets models author ordinary React, SVG,
 Canvas, or Recharts. There is no required domain language or fixed visual template.
 `SimFrame`, `Control`, and `Stat` preserve the existing visual language.
 
+## Learning through play
+
+The primary experience is a prepared environment: a few concrete objects, an
+inviting starting state, meaningful actions on those objects, and immediate visible
+consequences. The learner should be able to discover the relationship by trying two
+different action sequences. Explanations follow the learner's action rather than
+leading with the answer.
+
+Each simulation needs a concept-specific verb such as flip, connect, move, schedule,
+send, or place. Sliders, playback, tabs, and tables may support an experiment, but
+they are not sufficient as its primary interaction. Keep primary actions beside the
+objects they affect. Include Undo or Reset and explain blocked actions locally.
+Avoid scores, confetti, mandatory quizzes, and decorative game mechanics.
+
 ## Generated simulations
 
 `services/geminiService.ts` first requests a structured model specification:
@@ -50,6 +64,21 @@ its transcript scrolls independently without moving the simulation.
 
 ## Curated library
 
+The Computer Science library opens with 50 hands-on workbenches. Related topics
+share a material where comparing behavior is the useful experiment: for example,
+one data-structure tray can become a stack, queue, set, array, or linked list while
+preserving its objects. The original 56 stepwise lessons remain as internal model
+fixtures for regression coverage; they are not exposed in the learner-facing library.
+
+The 50 materials span visible symbol encoding, memory and object structures, paths
+and algorithms, interruptible systems, databases, security, and small AI models.
+They use tile trays, grids, node maps, queues, memory frames, pipeline lanes, and
+decision surfaces; charts and tables are never the primary CS activity.
+
+Hands-on state transitions live in `simulations/playground.ts`; the UI calls those
+same functions tested in `simulations/playground.test.ts`. Workbench metadata and
+search terms live in `simulations/playgroundCatalog.ts`.
+
 The former generic CS placeholders now reference `simulations/lessons.ts`. Each
 lesson owns parameters, explicit assumptions, and a deterministic `run(params)`
 function returning actual state transitions. `TraceSimulation` renders state,
@@ -68,9 +97,16 @@ curated checks use known solutions and conserved quantities.
 ## Verification
 
 - `npm test`: independent model assertions, parameter-boundary checks, generation
-  contract tests, and initial-render smoke tests for every cached library entry.
+  contract tests, action-sequence tests, and initial-render smoke tests for every
+  cached library entry.
 - `npm run typecheck`: TypeScript checks.
 - `npm run build`: production compilation.
+
+`generation-lab.html` is a development-only visual harness. It opens every
+workbench and saved generated sample at 600 × 420, 960 × 600, or 360 × 560 without
+adding the harness to the production entry point. `scripts/test-generations.ts`
+creates two real samples through the local generation API; the saved prompts and
+browser findings are recorded beside the output in `artifacts/generations/`.
 
 The library smoke test checks generated JSX syntax and server rendering; it does
 not test browser layout, animation effects, or the scientific validity of every

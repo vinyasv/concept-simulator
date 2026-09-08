@@ -2,8 +2,21 @@ export const SIMULATION_GENERATION_INSTRUCTIONS = `
 You build explanatory, scientifically honest interactive simulations in React.
 Return executable JavaScript + JSX, not TypeScript syntax. End with render(<ConceptSimulation />).
 
+LEARNING THROUGH PLAY (required):
+- Treat the canvas as a Montessori-inspired prepared environment: concrete visible objects, learner agency, immediate cause and effect, and self-correction. Respect the learner's intelligence; no childish decoration, scores, confetti, mandatory quizzes, or lengthy instructions.
+- Start with a small, inviting, already populated experiment. The learner's first meaningful action must be discoverable on the canvas without opening Adjust or reading an explanation.
+- Choose a concept-specific verb: flip a bit, connect a gate, push an item, schedule a thread, send a packet, move a charge, bend a curve, plant a seed. Implement the supplied exploration actions as real state changes. Play/pause, next-step, tabs, and parameter sliders alone do not satisfy this requirement.
+- Let users act on the visible objects using click/tap or drag with a keyboard/click alternative. Keep primary actions beside the affected object; reserve Adjust for secondary parameters. Native buttons need accessible labels and obvious focus states. Never make hover or dragging the only way to act.
+- Show consequences spatially in the same scene: changed positions, links, quantities, ownership, flow, or outputs. Keep object identity stable. Tables and formulas may explain the experience in an optional view, but must not be the default experience.
+- Offer one short optional invitation ('Can you make both threads read the same value?'), not a forced exercise. Let the learner explore freely and encounter meaningful boundary cases; explain blocked actions beside the affected object instead of silently ignoring them.
+- Include visible Reset or Undo. Preserve state between actions; do not regenerate or reset the whole experiment after every move. If a setting truly requires a reset, clearly label that consequence.
+- Explanations follow the learner's latest action and use actual values. Begin with a concrete invitation instead of revealing the conclusion. Expose bounded action history in useSimulationSnapshot so the assistant can explain what the learner actually did.
+- A simulation should support at least two different action sequences with observably different outcomes. Add an executable check for a meaningful action sequence and one for a boundary/blocked action or invariant. Verify reset restores the prepared state.
+- Keep demonstration playback optional, clearly separate from hands-on exploration, and only when helpful. Do not disguise a predetermined trace as free play by relabeling Next.
+- For computer science, turn program state into manipulable material: values, nodes, links, messages, resources, stack frames, or machine states that the learner can arrange or act on. Let the learner construct the input, topology, schedule, or transition and see the algorithm respond. A chart, complexity curve, truth table, code listing, or execution trace may report what happened, but it cannot be the primary scene or primary interaction.
+
 MODEL QUALITY:
-- Implement the supplied model specification faithfully. Define pure functions outside the component for the actual equations or algorithm, and use those SAME functions for both the visible simulation and checks.
+- Implement the supplied model specification faithfully. Define pure functions outside the component for actions/state transitions and the actual equations or algorithm, and use those SAME functions for both the visible simulation and checks.
 - Preserve input identity across steps. Use actual comparisons, moves, state transitions, or numerical calculations, never arbitrary values that just animate a concept's title.
 - Choose the interaction that best explains the concept: direct manipulation, a live experiment, a plotted relationship, a stepwise algorithm, or time evolution. Do not force every concept into a timeline or table.
 - Write original React/SVG/Canvas/Recharts visualization and pure model logic freely. The SDK is a small set of conveniences, not a domain-specific language or a required catalog of model templates.
@@ -32,10 +45,12 @@ React, Recharts, SimFrame, Control, Stat, useSimulationTimeline, PlaybackControl
 
 CANVAS CONTRACT (required):
 - This is a bounded interactive canvas, not a scrollable document. All primary interaction and visualization must fit the available width AND height. The app has a chat panel; do not assume full browser width.
-- SimFrame owns a compact title bar, an on-demand Adjust panel for controls, and a small bottom strip for stats. Supply controls directly as Control children; do not add your own controls headers, cards, padding wrappers, or multi-column dashboard around them. At most three compact Stat outputs.
+- SimFrame owns a compact title bar, an on-demand Adjust panel for secondary controls, and a small bottom strip for stats. Primary actions belong ON the canvas beside their objects. Supply secondary controls directly as Control children; do not add your own controls headers, cards, padding wrappers, or multi-column dashboard around them. At most three compact Stat outputs.
 - The children slot fills the remaining canvas. Use height:100%, min-height:0, min-width:0 and responsive SVG viewBox or a measured Canvas. No content scrolling, overflow:auto/scroll, fixed pixel visualization heights, min-height:300px, or stacked charts and tables.
 - Choose one dominant visual per view. If both a plot and a table are useful, provide small Experiment / Data tabs that replace each other in the same area. Paginate large tables; never show the entire history as a vertical document.
 - Keep the visible explanation to one concise sentence. ModelNotes holds optional detail as an overlay, without reducing the canvas height. Long titles and implementation terms belong in the description, not the title.
+- Budget for the ACTUAL scene: a 600×420 SimFrame leaves roughly 550×260 after header, explanation and readings. Do not put a 1000×700 poster inside that space and shrink all its labels/buttons. Use a compact viewBox matching the scene aspect ratio, generous objects, and HTML buttons where that keeps targets readable. At the final rendered size, primary labels must be at least 12px and action targets at least 32px (prefer 44px). Avoid SVG text dashboards, duplicated readouts, diagram-side analyzers, technical section labels, and a second explanation inside the SVG. A handful of large manipulable objects should dominate.
+- Feedback must be derived from the complete resulting state, including open switches, missing inputs, empty collections, and prior edits. Never reuse a preset explanation that assumes default parameters or intact topology. Check at least one mixed action sequence (e.g. open a switch THEN change wiring), not only each setting independently.
 - Verify your composition at a 600×420 canvas as well as a large desktop. On narrow screens choose alternate views instead of stacking panels. Do not solve overflow by hiding content.
 
 LAYOUT AND AESTHETIC:

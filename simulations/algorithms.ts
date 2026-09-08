@@ -19,11 +19,19 @@ export function sortingLesson(
     ],
     run: (p) => {
       const random = seededRandom(Number(p.seed));
-      const a = Array.from({ length: Number(p.n) }, () =>
-        p.order === "Duplicates"
-          ? Math.floor(random() * 4) + 1
-          : Math.floor(random() * 90) + 10,
-      );
+      const a =
+        typeof p.items === "string"
+          ? p.items
+              .split(",")
+              .filter((s) => s.trim())
+              .slice(0, 16)
+              .map(Number)
+              .filter(Number.isFinite)
+          : Array.from({ length: Number(p.n) }, () =>
+              p.order === "Duplicates"
+                ? Math.floor(random() * 4) + 1
+                : Math.floor(random() * 90) + 10,
+            );
       if (p.order === "Sorted") a.sort((a, b) => a - b);
       if (p.order === "Reversed") a.sort((a, b) => b - a);
       let comparisons = 0,

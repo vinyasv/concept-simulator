@@ -1,0 +1,7 @@
+{
+  "prompt": "Help me discover series and parallel circuits by playing with a battery, bulbs, and wires. I want to connect things, open a switch, and see which bulbs respond. Keep it a small honest ideal resistive DC model.",
+  "generatedAt": "2026-09-05T16:40:19.752Z",
+  "elapsedSeconds": 129,
+  "status": "Passed executable checks and browser action-sequence retest at 600 × 420",
+  "repairFinding": "Browser audit: at a 600x420 SimFrame, the whole circuit is tiny, with an unnecessary dark analyzer duplicating the stats. Redesign the component scene to fill ~550x250 with large battery, two bulbs and directly clickable switches. Keep topology selection on canvas, use native HTML buttons where helpful, no side analyzer and no tiny SVG explanations. Start with a short invitation that doesn't give away the answer. CRITICAL actual observed bug: open Switch 1 in Series, then select Parallel. Bulb 1 is 0W and Bulb 2 is 24W, but feedback says each receives full voltage and quadruples to 0W. Derive feedback from complete resulting state and add an assertion for this mixed action sequence. Retain the existing physics model and all existing expected checks. Preserve 12V, two 6ohm bulbs; per branch current/power must stay correct. Include reset and keyboard operable switches. No new imports/dependencies."
+}

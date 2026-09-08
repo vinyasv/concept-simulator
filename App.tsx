@@ -310,17 +310,17 @@ const FreshApp = () => {
   return <IterationOne workspace={workspace} />;
 };
 
-const RedirectToMinimal = () => {
+const RedirectToDefault = () => {
   React.useEffect(() => {
-    window.location.replace('/1');
+    window.location.replace('/');
   }, []);
   return null;
 };
 
 const App = () => {
-  if (window.location.pathname === '/1') return <FreshApp />;
-  if (window.location.pathname === '/2') return <RedirectToMinimal />;
-  return <LegacyApp />;
+  if (window.location.pathname === '/1') return <LegacyApp />;
+  if (window.location.pathname === '/2') return <RedirectToDefault />;
+  return <FreshApp />;
 };
 
 export default App;

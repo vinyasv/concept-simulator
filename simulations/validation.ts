@@ -2,6 +2,14 @@ export interface SimulationSpecification {
   title: string;
   question: string;
   assumptions: string[];
+  exploration: {
+    objects: string[];
+    firstAction: string;
+    actions: { verb: string; target: string; consequence: string }[];
+    feedback: string;
+    invitation: string;
+    reset: string;
+  };
   inputs: {
     name: string;
     meaning: string;
@@ -41,6 +49,30 @@ export function parseSpecification(text: string): SimulationSpecification {
   ) {
     throw new Error(
       "Model specification is incomplete. Please try generating again.",
+    );
+  }
+  const exploration = spec.exploration;
+  if (
+    !exploration ||
+    !strings(exploration.objects) ||
+    ![
+      exploration.firstAction,
+      exploration.feedback,
+      exploration.invitation,
+      exploration.reset,
+    ].every((value) => typeof value === "string" && value.trim()) ||
+    !Array.isArray(exploration.actions) ||
+    !exploration.actions.length ||
+    !exploration.actions.every(
+      (action: { verb?: string; target?: string; consequence?: string }) =>
+        action &&
+        [action.verb, action.target, action.consequence].every(
+          (value) => typeof value === "string" && value.trim(),
+        ),
+    )
+  ) {
+    throw new Error(
+      "Specify visible objects, learner actions, immediate feedback, an invitation, and reset behavior.",
     );
   }
   for (const parameter of spec.inputs) {
@@ -120,7 +152,12 @@ export function validateRegistration(
 }
 export function extractSimulationCode(text: string): string {
   const match = text.match(/```(?:tsx|jsx|javascript|js)?\s*([\s\S]*?)\s*```/);
-  const code = (match ? match[1] : text).trim();
+  const code = (match ? match[1] : text)
+    .trim()
+    .replace(/^```(?:tsx|jsx|javascript|js)?[ \t]*\r?\n/, "")
+    .replace(/(?:\r?\n)?```[ \t]*$/, "")
+    .replace(/^(?:\/\/ @simulation-model-v1\s*\r?\n)+/, "")
+    .trim();
   if (!code) throw new Error("The model returned no simulation code.");
   return `// @simulation-model-v1\n${code}`;
 }
@@ -132,6 +169,7 @@ export const SPECIFICATION_SCHEMA = {
     "title",
     "question",
     "assumptions",
+    "exploration",
     "inputs",
     "rules",
     "outputs",
@@ -140,6 +178,37 @@ export const SPECIFICATION_SCHEMA = {
   properties: {
     title: { type: "string" },
     question: { type: "string" },
+    exploration: {
+      type: "object",
+      required: [
+        "objects",
+        "firstAction",
+        "actions",
+        "feedback",
+        "invitation",
+        "reset",
+      ],
+      properties: {
+        objects: { type: "array", minItems: 1, items: { type: "string" } },
+        firstAction: { type: "string" },
+        actions: {
+          type: "array",
+          minItems: 1,
+          items: {
+            type: "object",
+            required: ["verb", "target", "consequence"],
+            properties: {
+              verb: { type: "string" },
+              target: { type: "string" },
+              consequence: { type: "string" },
+            },
+          },
+        },
+        feedback: { type: "string" },
+        invitation: { type: "string" },
+        reset: { type: "string" },
+      },
+    },
     assumptions: { type: "array", minItems: 1, items: { type: "string" } },
     rules: { type: "array", minItems: 1, items: { type: "string" } },
     outputs: { type: "array", minItems: 1, items: { type: "string" } },

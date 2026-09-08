@@ -1,6 +1,7 @@
 import { LibraryCategory, FileData, LibraryItem } from './types';
 import { createCachedCSCode } from './cachedComputerScience';
 import { lessons } from './simulations/lessons';
+import { playgrounds } from './simulations/playgroundCatalog';
 
 export { GEMINI_MODEL_PRIMARY as GEMINI_MODEL_REASONING } from './geminiModels';
 
@@ -2494,7 +2495,7 @@ const csConcept = (id: string, label: string, subcategory: string, prompt: strin
   };
 };
 
-export const LIBRARY_DATA: LibraryCategory[] = [
+export const DEMONSTRATION_LIBRARY_DATA: LibraryCategory[] = [
   {
     id: 'physics',
     label: 'Physics',
@@ -2896,10 +2897,36 @@ export const LIBRARY_DATA: LibraryCategory[] = [
       ]
   }
 ];
+const csMaterials: LibraryCategory = {
+  id: 'cs',
+  label: 'Computer Science',
+  subcategories: [...new Set(playgrounds.map(playground => playground.group))].map(group => ({
+    id: `play-${group.toLowerCase().replace(/[^a-z]+/g, '-')}`,
+    label: group,
+    items: playgrounds.filter(playground => playground.group === group).map(playground => ({
+      id: `play_${playground.id}`,
+      label: playground.title,
+      description: playground.invitation,
+      keywords: playground.topics,
+      cachedCode: `render(<PlaygroundSimulation id="${playground.id}" />);`,
+      fileData: {
+        name: `play_${playground.id}.txt`,
+        type: 'text/plain',
+        category: 'Computer Science',
+        subcategory: group,
+        data: txtToBase64(`${playground.title}. ${playground.invitation} Concepts: ${playground.topics}. This is a hands-on workbench. Explain the learner's actions using the live snapshot and its explicit assumptions; do not assume broader topic coverage.`),
+      },
+    })),
+  })),
+};
+
+export const LIBRARY_DATA: LibraryCategory[] = DEMONSTRATION_LIBRARY_DATA.map(category =>
+  category.id === 'cs' ? csMaterials : category,
+);
 
 export const SAMPLE_FILES = [
   { label: 'Projectile Motion (Physics)', ...LIBRARY_DATA[0].subcategories[0].items[0].fileData },
   { label: 'SIR Disease Model (Bio)', ...LIBRARY_DATA[2].subcategories[0].items[0].fileData },
-  { label: 'Bubble Sort (CS)', ...LIBRARY_DATA[3].subcategories[0].items[0].fileData },
+  { label: 'Bit tray (CS)', ...LIBRARY_DATA[3].subcategories[0].items[0].fileData },
   { label: 'Riemann Sums (Math)', ...LIBRARY_DATA[1].subcategories[0].items[0].fileData }
 ];

@@ -122,9 +122,9 @@ const FreshAssistant: React.FC<FreshAssistantProps> = ({
   };
 
   const fallbackSuggestions = [
-    "Explain the core idea",
-    "Change one variable",
-    "Build a related simulation",
+    "What changed after my last move?",
+    "Give me something interesting to try",
+    "Help me compare two action sequences",
   ];
   const visibleSuggestions = suggestions.length
     ? suggestions
@@ -165,7 +165,7 @@ const FreshAssistant: React.FC<FreshAssistantProps> = ({
         {messages.length === 0 && !buildEvent && (
           <div className="assistant-empty">
             <h3>Explore this model</h3>
-            <p>Ask why something happens, or change the experiment.</p>
+            <p>Try something in the canvas, then ask about what happened.</p>
             <div className="assistant-suggestions">
               {visibleSuggestions.slice(0, 3).map((suggestion) => (
                 <button

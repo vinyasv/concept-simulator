@@ -1,0 +1,7 @@
+{
+  "prompt": "Help me discover insertion sort by moving numbered objects into a sorted tray myself. Let me try choices and see why a placement works or does not, and compare arrangements. I want to play, not watch an automatic animation.",
+  "generatedAt": "2026-09-05T16:42:03.390Z",
+  "elapsedSeconds": 104,
+  "status": "Passed executable checks and browser action-sequence retest at 600 × 420",
+  "repairFinding": "Browser audit: at a 600x420 SimFrame, the SVG tray and action labels are tiny. Redesign using a compact ~550x250 scene with large tiles, slots and visible native HTML actions or accessible SVG targets >=32 actual pixels. Remove the SVG header/invitation duplication, jargon such as ACTIVE HAND CRADLE or ASCENDING INVARIANT, and step-by-step answer instructions. Keep one brief invitation above the scene. Let users pick the next tile, move/compare existing tiles and attempt a placement with local feedback. Preserve your actual model, undo/reset, all original checks and expected outcomes. Ensure initial pick and all later slots/actions are comfortably readable at the small canvas. No decorative panels. No new imports/dependencies."
+}
