@@ -853,3 +853,29 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .play-key-exchange { gap:12px; }
   .play-public-channel { padding:8px 0; gap:10px; }
 }
+
+.mobile-unavailable {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 32px 24px 88px;
+  text-align: center;
+}
+.mobile-unavailable h1 {
+  text-wrap: balance;
+  max-width: 280px;
+  margin: 0;
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -.04em;
+  line-height: 1.25;
+}
+.mobile-unavailable p {
+  max-width: 260px;
+  margin: 16px 0 0;
+  color: #777;
+  font-size: 12px;
+  line-height: 1.6;
+}

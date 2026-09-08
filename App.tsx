@@ -317,7 +317,30 @@ const RedirectToDefault = () => {
   return null;
 };
 
+const mobileQuery = '(max-width: 800px), (pointer: coarse) and (max-height: 500px)';
+
 const App = () => {
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia(mobileQuery).matches);
+
+  React.useEffect(() => {
+    const media = window.matchMedia(mobileQuery);
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  if (isMobile) return (
+    <div className="concept-one">
+      <header className="minimal-header">
+        <a className="minimal-brand" href="/">Concept Simulator</a>
+      </header>
+      <main className="mobile-unavailable">
+        <h1>Not available on mobile for now</h1>
+        <p>Open on a desktop to use Concept Simulator.</p>
+      </main>
+    </div>
+  );
   if (window.location.pathname === '/1') return <LegacyApp />;
   if (window.location.pathname === '/2') return <RedirectToDefault />;
   return <FreshApp />;

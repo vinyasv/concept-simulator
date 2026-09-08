@@ -107,7 +107,7 @@ const FreshAssistant: React.FC<FreshAssistantProps> = ({
           text:
             requestError instanceof Error
               ? requestError.message
-              : "The assistant is temporarily unavailable. Please try again in a moment.",
+              : "Could not send your question. Try again.",
           timestamp: new Date(),
         },
       ]);
@@ -123,8 +123,8 @@ const FreshAssistant: React.FC<FreshAssistantProps> = ({
 
   const fallbackSuggestions = [
     "What changed after my last move?",
-    "Give me something interesting to try",
-    "Help me compare two action sequences",
+    "Which variable should I change next?",
+    "How does the order of actions affect the result?",
   ];
   const visibleSuggestions = suggestions.length
     ? suggestions
@@ -158,14 +158,14 @@ const FreshAssistant: React.FC<FreshAssistantProps> = ({
         <span className={file ? "status-dot is-ready" : "status-dot"} />
         {file
           ? `${file.name.replace(/\.[^.]+$/, "").replaceAll("_", " ")}`
-          : "Choose a simulation to add context"}
+          : "Choose a simulation first"}
       </div>
 
       <div className="fresh-assistant__messages" ref={messagesRef}>
         {messages.length === 0 && !buildEvent && (
           <div className="assistant-empty">
-            <h3>Explore this model</h3>
-            <p>Try something in the canvas, then ask about what happened.</p>
+            <h3>Ask about this simulation</h3>
+            <p>Change a value or move an object, then ask about the result.</p>
             <div className="assistant-suggestions">
               {visibleSuggestions.slice(0, 3).map((suggestion) => (
                 <button
@@ -201,9 +201,9 @@ const FreshAssistant: React.FC<FreshAssistantProps> = ({
               <strong>
                 {isProcessing || !buildEvent.started
                   ? buildEvent.mode === "update"
-                    ? "Updating canvas"
-                    : "Building on canvas"
-                  : "Applied to canvas"}
+                    ? "Updating simulation"
+                    : "Building simulation"
+                  : "Build finished"}
               </strong>
             </div>
           </div>
@@ -233,7 +233,7 @@ const FreshAssistant: React.FC<FreshAssistantProps> = ({
                 if (query.trim()) void ask(query);
               }
             }}
-            placeholder="Ask or change something…"
+            placeholder="Ask a question or describe a change"
             rows={2}
             value={query}
           />

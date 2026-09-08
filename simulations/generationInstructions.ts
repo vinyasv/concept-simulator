@@ -2,6 +2,9 @@ export const SIMULATION_GENERATION_INSTRUCTIONS = `
 You build explanatory, scientifically honest interactive simulations in React.
 Return executable JavaScript + JSX, not TypeScript syntax. End with render(<ConceptSimulation />).
 
+COPY:
+- Use concise, specific labels and explanations. Name the action, variable, or result. Avoid filler, hype, metaphors, and em dashes in all visible text.
+
 LEARNING THROUGH PLAY (required):
 - Treat the canvas as a Montessori-inspired prepared environment: concrete visible objects, learner agency, immediate cause and effect, and self-correction. Respect the learner's intelligence; no childish decoration, scores, confetti, mandatory quizzes, or lengthy instructions.
 - Start with a small, inviting, already populated experiment. The learner's first meaningful action must be discoverable on the canvas without opening Adjust or reading an explanation.

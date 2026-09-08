@@ -53,7 +53,7 @@ const ConceptCreator: React.FC<ConceptCreatorProps> = ({
       setMessages(previous => [...previous, {
         id: crypto.randomUUID(),
         role: 'ai',
-        text: response.text || 'I have enough detail to build that.',
+        text: response.text || 'Ready to build.',
         timestamp: new Date(),
       }]);
 
@@ -63,7 +63,7 @@ const ConceptCreator: React.FC<ConceptCreatorProps> = ({
     } catch (requestError) {
       setError(requestError instanceof Error
         ? requestError.message
-        : 'The concept guide is unavailable. Check the local API and try again.');
+        : 'Could not send your request. Try again.');
     } finally {
       setIsThinking(false);
     }
@@ -89,7 +89,7 @@ const ConceptCreator: React.FC<ConceptCreatorProps> = ({
       <header className="concept-creator__header">
         <div>
           <p className="eyebrow">New simulation</p>
-          <h2>What should we model?</h2>
+          <h2>What should the simulation show?</h2>
         </div>
         <button className="icon-button" onClick={onClose} aria-label="Close concept creator">
           <X size={18} />
@@ -100,7 +100,7 @@ const ConceptCreator: React.FC<ConceptCreatorProps> = ({
         {messages.length === 0 && !isThinking && (
           <div className="creator-empty">
             <Sparkles size={24} strokeWidth={1.4} />
-            <p>Describe what you want to understand. I’ll ask only for details the simulation needs.</p>
+            <p>Name a topic and what you want to test.</p>
             <div className="creator-starters">
               {starters.map(starter => (
                 <button key={starter} onClick={() => void send(starter)} type="button">
@@ -113,12 +113,12 @@ const ConceptCreator: React.FC<ConceptCreatorProps> = ({
 
         {messages.map(message => (
           <article className={`creator-message creator-message--${message.role}`} key={message.id}>
-            <span>{message.role === 'user' ? 'You' : 'Guide'}</span>
+            <span>{message.role === 'user' ? 'You' : 'Assistant'}</span>
             <p>{message.text}</p>
           </article>
         ))}
 
-        {isThinking && <p className="creator-thinking">Working out what the model needs…</p>}
+        {isThinking && <p className="creator-thinking">Reading your request</p>}
         {error && <p className="creator-error" role="alert">{error}</p>}
         <div ref={endRef} />
       </div>
@@ -137,7 +137,7 @@ const ConceptCreator: React.FC<ConceptCreatorProps> = ({
                 if (draft.trim()) void send(draft);
               }
             }}
-            placeholder="Describe a concept, system, or question…"
+            placeholder="Describe what you want to simulate"
             rows={3}
             value={draft}
           />
@@ -146,7 +146,7 @@ const ConceptCreator: React.FC<ConceptCreatorProps> = ({
           </button>
         </form>
         <button className="creator-browse" onClick={onBrowse} type="button">
-          <BookOpen size={14} /> Browse ready-made simulations
+          <BookOpen size={14} /> Browse simulations
         </button>
       </div>
     </section>

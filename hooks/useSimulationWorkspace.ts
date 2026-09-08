@@ -47,7 +47,7 @@ export const useSimulationWorkspace = () => {
 
     setStatus(AppStatus.ANALYZING);
     setIsCachedSession(false);
-    addLog('Building a new simulation…', 'info');
+    addLog('Building simulation', 'info');
 
     try {
       const generatedCode = await analyzeAndGenerateSimulation(
@@ -77,7 +77,7 @@ export const useSimulationWorkspace = () => {
     setSimulationSnapshot(null);
     setStatus(AppStatus.ANALYZING);
     setIsCachedSession(false);
-    addLog('Generating a fresh version…', 'warning');
+    addLog('Rebuilding simulation', 'warning');
 
     try {
       const generatedCode = await analyzeAndGenerateSimulation(

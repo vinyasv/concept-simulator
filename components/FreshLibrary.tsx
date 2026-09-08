@@ -59,7 +59,7 @@ const FreshLibrary: React.FC<FreshLibraryProps> = ({
     if (!file) return;
     setUploadError('');
     if (!acceptedTypes.includes(file.type)) {
-      setUploadError('Choose a PDF, image, or text file.');
+      setUploadError('Choose a PDF, JPG, PNG, WebP, or TXT file.');
       return;
     }
 
@@ -77,12 +77,12 @@ const FreshLibrary: React.FC<FreshLibraryProps> = ({
       <div className="fresh-library__topline">
         <div>
           <p className="eyebrow">Concept library</p>
-          <h2>{mode === 'palette' ? 'Choose what to explore' : 'Explore'}</h2>
+          <h2>{mode === 'palette' ? 'Choose a simulation' : 'Simulations'}</h2>
         </div>
         <div className="fresh-library__actions">
           {onCreateNew && (
             <button className="text-button" onClick={onCreateNew} type="button">
-              New concept
+              New simulation
             </button>
           )}
           {onClose && (

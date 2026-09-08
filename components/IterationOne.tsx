@@ -122,11 +122,11 @@ const IterationOne: React.FC<IterationOneProps> = ({ workspace }) => {
       >
         {!workspace.currentFile ? (
           <section className="minimal-start">
-            <p className="minimal-kicker">Learn by changing the model</p>
+            <p className="minimal-kicker">Interactive simulations</p>
             <h1>
               What do you want
               <br />
-              to understand?
+              to simulate?
             </h1>
             <form className="minimal-prompt" onSubmit={submitPrompt}>
               <label className="visually-hidden" htmlFor="start-concept">
@@ -136,7 +136,7 @@ const IterationOne: React.FC<IterationOneProps> = ({ workspace }) => {
                 autoFocus
                 id="start-concept"
                 onChange={(event) => setPrompt(event.target.value)}
-                placeholder="Try “why do orbits stay stable?”"
+                placeholder="Try: How does gravity affect an orbit?"
                 value={prompt}
               />
               <button
@@ -152,7 +152,7 @@ const IterationOne: React.FC<IterationOneProps> = ({ workspace }) => {
               onClick={() => setPanel("library")}
               type="button"
             >
-              Or browse ready-made simulations
+              Browse simulations
             </button>
           </section>
         ) : (
@@ -166,12 +166,12 @@ const IterationOne: React.FC<IterationOneProps> = ({ workspace }) => {
                     <span />
                     <p>Building your simulation</p>
                     <small>
-                      {workspace.latestLog?.message ?? "Preparing the model…"}
+                      {workspace.latestLog?.message ?? "Reading your concept"}
                     </small>
                   </div>
                 ) : workspace.status === AppStatus.ERROR ? (
                   <div className="minimal-build-state is-error" role="alert">
-                    <p>We couldn’t build this simulation.</p>
+                    <p>Could not build this simulation.</p>
                     <small>
                       {workspace.latestLog?.message ??
                         "Try describing the concept another way."}
@@ -180,7 +180,7 @@ const IterationOne: React.FC<IterationOneProps> = ({ workspace }) => {
                       onClick={() => setAssistantOpen(true)}
                       type="button"
                     >
-                      Revise in conversation
+                      Edit your request
                     </button>
                   </div>
                 ) : (
