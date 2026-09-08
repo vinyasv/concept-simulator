@@ -1,4 +1,8 @@
 {
     "buildCommand": "npm run build",
-    "installCommand": "npm install"
+    "installCommand": "npm install",
+    "rewrites": [
+        { "source": "/1", "destination": "/index.html" },
+        { "source": "/2", "destination": "/index.html" }
+    ]
 }
