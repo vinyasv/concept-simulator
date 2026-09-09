@@ -28,6 +28,14 @@ export interface SimulationRegistration {
   assumptions: string[];
   checks: { name: string; test: () => boolean }[];
 }
+
+export type SimulationPlan =
+  | { kind: "clarify"; clarification: string; specification: null }
+  | {
+      kind: "build";
+      clarification: string;
+      specification: SimulationSpecification;
+    };
 const strings = (value: unknown): value is string[] =>
   Array.isArray(value) &&
   value.length > 0 &&
@@ -111,6 +119,45 @@ export function parseSpecification(text: string): SimulationSpecification {
       throw new Error("Model specification needs concrete expected results.");
   }
   return spec;
+}
+
+export function parseSimulationPlan(text: string): SimulationPlan {
+  const plan = JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, "").trim());
+  if (plan?.kind === "clarify") {
+    if (typeof plan.clarification !== "string" || !plan.clarification.trim()) {
+      throw new Error("A clarification plan needs one concrete question.");
+    }
+    return {
+      kind: "clarify",
+      clarification: plan.clarification.trim(),
+      specification: null,
+    };
+  }
+  if (plan?.kind !== "build" || !plan.specification) {
+    throw new Error("The simulation plan is incomplete.");
+  }
+  return {
+    kind: "build",
+    clarification:
+      typeof plan.clarification === "string" ? plan.clarification : "",
+    specification: parseSpecification(JSON.stringify(plan.specification)),
+  };
+}
+
+export function suggestionsFromSpecification(
+  specification: SimulationSpecification,
+): string[] {
+  const candidates = [
+    specification.exploration.invitation,
+    specification.exploration.firstAction,
+    ...specification.exploration.actions.map(
+      (action) => `${action.verb} ${action.target}. What changes?`,
+    ),
+  ];
+  return [...new Set(candidates.map((value) => value.trim()).filter(Boolean))].slice(
+    0,
+    3,
+  );
 }
 /** Checks are executable regression examples, not a guarantee of scientific correctness. */
 export function validateRegistration(
@@ -249,6 +296,18 @@ export const SPECIFICATION_SCHEMA = {
           expected: { type: "string" },
         },
       },
+    },
+  },
+};
+
+export const SIMULATION_PLAN_SCHEMA = {
+  type: "object",
+  required: ["kind", "clarification", "specification"],
+  properties: {
+    kind: { type: "string", enum: ["clarify", "build"] },
+    clarification: { type: "string" },
+    specification: {
+      anyOf: [SPECIFICATION_SCHEMA, { type: "null" }],
     },
   },
 };

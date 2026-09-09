@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { ArrowRight, BookOpen, PanelRightOpen, RotateCcw } from "lucide-react";
 import { SimulationWorkspace } from "../hooks/useSimulationWorkspace";
 import { AppStatus, FileData, LibraryItem } from "../types";
-import ConceptCreator from "./ConceptCreator";
 import FreshAssistant from "./FreshAssistant";
 import FreshLibrary from "./FreshLibrary";
 import SimulationCanvas from "./SimulationCanvas";
@@ -11,25 +10,7 @@ interface IterationOneProps {
   workspace: SimulationWorkspace;
 }
 
-type OpenPanel = "library" | "create" | null;
-
-const toFileData = (topic: string): FileData => {
-  const name =
-    topic
-      .split(/[.!?\n]/)[0]
-      .trim()
-      .slice(0, 56)
-      .replace(/[^a-z0-9]+/gi, "_")
-      .replace(/^_|_$/g, "")
-      .toLowerCase() || "custom_concept";
-
-  return {
-    name: `${name}.txt`,
-    type: "text/plain",
-    data: btoa(unescape(encodeURIComponent(topic))),
-    category: "Custom",
-  };
-};
+type OpenPanel = "library" | null;
 
 const IterationOne: React.FC<IterationOneProps> = ({ workspace }) => {
   const [panel, setPanel] = useState<OpenPanel>(null);
@@ -37,12 +18,6 @@ const IterationOne: React.FC<IterationOneProps> = ({ workspace }) => {
     () => window.innerWidth > 800,
   );
   const [prompt, setPrompt] = useState("");
-  const [creatorSeed, setCreatorSeed] = useState("");
-
-  const openCreator = (seed = "") => {
-    setCreatorSeed(seed);
-    setPanel("create");
-  };
 
   const selectItem = (item: LibraryItem) => {
     workspace.selectLibraryItem(item);
@@ -54,34 +29,13 @@ const IterationOne: React.FC<IterationOneProps> = ({ workspace }) => {
     setPanel(null);
   };
 
-  const generateConcept = (topic: string) => {
-    setPanel(null);
-    setPrompt("");
-    void workspace.selectFile(toFileData(topic));
-  };
-
-  const generateFromConversation = (
-    topic: string,
-    mode: "create" | "update",
-  ) => {
-    const nextFile =
-      mode === "update" && workspace.currentFile
-        ? {
-            ...workspace.currentFile,
-            type: "text/plain",
-            data: btoa(unescape(encodeURIComponent(topic))),
-            category: "Custom",
-          }
-        : toFileData(topic);
-
-    void workspace.selectFile(nextFile);
-  };
-
   const submitPrompt = (event: React.FormEvent) => {
     event.preventDefault();
     const nextPrompt = prompt.trim();
     if (!nextPrompt) return;
-    openCreator(nextPrompt);
+    setPrompt("");
+    setAssistantOpen(window.innerWidth > 800);
+    void workspace.createFromPrompt(nextPrompt);
   };
 
   const reset = () => {
@@ -122,12 +76,21 @@ const IterationOne: React.FC<IterationOneProps> = ({ workspace }) => {
       >
         {!workspace.currentFile ? (
           <section className="minimal-start">
-            <p className="minimal-kicker">Interactive simulations</p>
+            <p className="minimal-kicker">
+              {workspace.clarification
+                ? "Clarify the simulation"
+                : "Interactive simulations"}
+            </p>
             <h1>
               What do you want
               <br />
               to simulate?
             </h1>
+            {workspace.clarification && (
+              <p className="minimal-clarification" role="status">
+                {workspace.clarification.question}
+              </p>
+            )}
             <form className="minimal-prompt" onSubmit={submitPrompt}>
               <label className="visually-hidden" htmlFor="start-concept">
                 Describe a concept
@@ -136,7 +99,11 @@ const IterationOne: React.FC<IterationOneProps> = ({ workspace }) => {
                 autoFocus
                 id="start-concept"
                 onChange={(event) => setPrompt(event.target.value)}
-                placeholder="Try: How does gravity affect an orbit?"
+                placeholder={
+                  workspace.clarification
+                    ? "Type your answer"
+                    : "Try: How does gravity affect an orbit?"
+                }
                 value={prompt}
               />
               <button
@@ -176,12 +143,20 @@ const IterationOne: React.FC<IterationOneProps> = ({ workspace }) => {
                       {workspace.latestLog?.message ??
                         "Try describing the concept another way."}
                     </small>
-                    <button
-                      onClick={() => setAssistantOpen(true)}
-                      type="button"
-                    >
-                      Edit your request
-                    </button>
+                    <div className="minimal-build-actions">
+                      <button
+                        onClick={() => void workspace.regenerate()}
+                        type="button"
+                      >
+                        Retry build
+                      </button>
+                      <button
+                        onClick={() => setAssistantOpen(true)}
+                        type="button"
+                      >
+                        Edit your request
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <SimulationCanvas
@@ -205,7 +180,9 @@ const IterationOne: React.FC<IterationOneProps> = ({ workspace }) => {
                     isProcessing={workspace.isProcessing}
                     mode="workspace"
                     onClose={() => setAssistantOpen(false)}
-                    onGenerate={generateFromConversation}
+                    onGenerate={workspace.buildFromConversation}
+                    messages={workspace.conversation}
+                    onMessage={workspace.appendConversation}
                     suggestions={workspace.suggestions}
                   />
                 </div>
@@ -234,25 +211,19 @@ const IterationOne: React.FC<IterationOneProps> = ({ workspace }) => {
             aria-label="Dismiss panel"
           />
           <div className="minimal-side-sheet">
-            {panel === "library" ? (
-              <FreshLibrary
-                activeFile={workspace.currentFile}
-                isProcessing={workspace.isProcessing}
-                mode="palette"
-                onClose={() => setPanel(null)}
-                onCreateNew={() => openCreator()}
-                onFileSelect={selectFile}
-                onItemSelect={selectItem}
-              />
-            ) : (
-              <ConceptCreator
-                initialPrompt={creatorSeed}
-                isProcessing={workspace.isProcessing}
-                onBrowse={() => setPanel("library")}
-                onClose={() => setPanel(null)}
-                onGenerate={generateConcept}
-              />
-            )}
+            <FreshLibrary
+              activeFile={workspace.currentFile}
+              isProcessing={workspace.isProcessing}
+              mode="palette"
+              onClose={() => setPanel(null)}
+              onCreateNew={() => {
+                workspace.reset();
+                setPanel(null);
+                setPrompt("");
+              }}
+              onFileSelect={selectFile}
+              onItemSelect={selectItem}
+            />
           </div>
         </div>
       )}

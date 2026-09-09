@@ -7,6 +7,8 @@ import { assertFrames, defaults, modPow } from "./model";
 import { physicsModels, predatorPrey } from "./physics";
 import {
   parseSpecification,
+  parseSimulationPlan,
+  suggestionsFromSpecification,
   validateRegistration,
   extractSimulationCode,
 } from "./validation";
@@ -336,4 +338,49 @@ test("repair extraction tolerates a lone trailing fence and repeated model marke
     extractSimulationCode(raw),
     "// @simulation-model-v1\nrender(<Demo/>);",
   );
+});
+
+test("simulation plans distinguish a needed clarification from a build", () => {
+  assert.deepEqual(
+    parseSimulationPlan(
+      JSON.stringify({
+        kind: "clarify",
+        clarification: "Which objects should the learner manipulate?",
+        specification: null,
+      }),
+    ),
+    {
+      kind: "clarify",
+      clarification: "Which objects should the learner manipulate?",
+      specification: null,
+    },
+  );
+  assert.equal(
+    parseSimulationPlan(
+      JSON.stringify({
+        kind: "build",
+        clarification: "",
+        specification: validSpec,
+      }),
+    ).kind,
+    "build",
+  );
+  assert.throws(() =>
+    parseSimulationPlan(
+      JSON.stringify({ kind: "clarify", clarification: "", specification: null }),
+    ),
+  );
+  assert.throws(() =>
+    parseSimulationPlan(
+      JSON.stringify({ kind: "build", clarification: "", specification: null }),
+    ),
+  );
+});
+
+test("assistant invitations are derived from the validated interaction contract", () => {
+  assert.deepEqual(suggestionsFromSpecification(validSpec), [
+    "Can you make five?",
+    "Add a bead",
+    "Add Bead tray. What changes?",
+  ]);
 });

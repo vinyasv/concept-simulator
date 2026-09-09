@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   ArrowUp,
-  Check,
   LoaderCircle,
   ArrowUpRight,
   PanelRightClose,
@@ -16,15 +15,10 @@ interface FreshAssistantProps {
   mode: "drawer" | "sheet" | "workspace";
   onClose: () => void;
   onGenerate?: (topic: string, mode: "create" | "update") => void;
+  messages: ChatMessage[];
+  onMessage: (message: ChatMessage) => void;
   isProcessing?: boolean;
   suggestions: string[];
-}
-
-interface BuildEvent {
-  id: string;
-  mode: "create" | "update";
-  topic: string;
-  started: boolean;
 }
 
 const FreshAssistant: React.FC<FreshAssistantProps> = ({
@@ -33,29 +27,21 @@ const FreshAssistant: React.FC<FreshAssistantProps> = ({
   mode,
   onClose,
   onGenerate,
+  messages,
+  onMessage,
   isProcessing = false,
   suggestions,
 }) => {
   const [query, setQuery] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [buildEvent, setBuildEvent] = useState<BuildEvent | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const messagesRef = useRef<HTMLDivElement>(null);
   const currentFileRef = useRef(file);
   currentFileRef.current = file;
 
   useEffect(() => {
-    if (isProcessing && buildEvent && !buildEvent.started) {
-      setBuildEvent((previous) =>
-        previous ? { ...previous, started: true } : previous,
-      );
-    }
-  }, [buildEvent, isProcessing]);
-
-  useEffect(() => {
     const element = messagesRef.current;
     element?.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
-  }, [isLoading, messages]);
+  }, [isLoading, isProcessing, messages]);
 
   const ask = async (text: string) => {
     const normalized = text.trim();
@@ -67,7 +53,7 @@ const FreshAssistant: React.FC<FreshAssistantProps> = ({
       text: normalized,
       timestamp: new Date(),
     };
-    setMessages((previous) => [...previous, userMessage]);
+    onMessage(userMessage);
     setQuery("");
     setIsLoading(true);
 
@@ -79,38 +65,26 @@ const FreshAssistant: React.FC<FreshAssistantProps> = ({
         simulationSnapshot,
       );
       if (currentFileRef.current !== requestFile) return;
-      setMessages((previous) => [
-        ...previous,
-        {
-          id: crypto.randomUUID(),
-          role: "ai",
-          text: response.text,
-          timestamp: new Date(),
-        },
-      ]);
+      onMessage({
+        id: crypto.randomUUID(),
+        role: "ai",
+        text: response.text,
+        timestamp: new Date(),
+      });
 
       if (response.action?.type === "generate" && onGenerate) {
-        setBuildEvent({
-          id: crypto.randomUUID(),
-          mode: response.action.mode,
-          topic: response.action.topic,
-          started: false,
-        });
         onGenerate(response.action.topic, response.action.mode);
       }
     } catch (requestError) {
-      setMessages((previous) => [
-        ...previous,
-        {
-          id: crypto.randomUUID(),
-          role: "ai",
-          text:
-            requestError instanceof Error
-              ? requestError.message
-              : "Could not send your question. Try again.",
-          timestamp: new Date(),
-        },
-      ]);
+      onMessage({
+        id: crypto.randomUUID(),
+        role: "ai",
+        text:
+          requestError instanceof Error
+            ? requestError.message
+            : "Could not send your question. Try again.",
+        timestamp: new Date(),
+      });
     } finally {
       setIsLoading(false);
     }
@@ -162,7 +136,7 @@ const FreshAssistant: React.FC<FreshAssistantProps> = ({
       </div>
 
       <div className="fresh-assistant__messages" ref={messagesRef}>
-        {messages.length === 0 && !buildEvent && (
+        {messages.length === 0 && !isProcessing && (
           <div className="assistant-empty">
             <h3>Ask about this simulation</h3>
             <p>Change a value or move an object, then ask about the result.</p>
@@ -190,21 +164,11 @@ const FreshAssistant: React.FC<FreshAssistantProps> = ({
             <p>{message.text}</p>
           </article>
         ))}
-        {buildEvent && (
+        {isProcessing && (
           <div className="assistant-build-event" aria-live="polite">
-            {isProcessing || !buildEvent.started ? (
-              <LoaderCircle size={14} />
-            ) : (
-              <Check size={14} />
-            )}
+            <LoaderCircle size={14} />
             <div>
-              <strong>
-                {isProcessing || !buildEvent.started
-                  ? buildEvent.mode === "update"
-                    ? "Updating simulation"
-                    : "Building simulation"
-                  : "Build finished"}
-              </strong>
+              <strong>Building simulation</strong>
             </div>
           </div>
         )}
